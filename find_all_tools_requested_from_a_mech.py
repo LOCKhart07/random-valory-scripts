@@ -1,7 +1,8 @@
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
+from collections import defaultdict
 
 import requests
 from dotenv import load_dotenv
@@ -70,10 +71,10 @@ def get_all_tool_ids(days=7, contract_address=None, from_block=None, max_workers
     if from_block is None:
         from_block = max(latest_block - (blocks_per_day * days), 0)
 
-    print(f"🔎 Searching Request events")
+    print(f"🔎 Searching Request events for {contract_address=}")
     print(f"⏱  From block {from_block} → {latest_block} (≈ last {days} days)\n")
 
-    all_tools_requested_for = set()
+    all_tools_requested_for = defaultdict(int)
 
     for start in range(from_block, latest_block, MAX_BLOCK_SPAN):
         end = min(start + MAX_BLOCK_SPAN - 1, latest_block)
@@ -104,7 +105,7 @@ def get_all_tool_ids(days=7, contract_address=None, from_block=None, max_workers
             for future in as_completed(futures):
                 tool = future.result()
                 if tool:
-                    all_tools_requested_for.add(tool)
+                    all_tools_requested_for[tool] += 1
 
     return all_tools_requested_for
 
@@ -118,7 +119,7 @@ if __name__ == "__main__":
         f.write("")
 
     contract_address = "0xC05e7412439bD7e91730a6880E18d5D5873F632C"
-    days = 7
+    days = 3
     requested_tools = get_all_tool_ids(
         days, contract_address, from_block=None, max_workers=20
     )
@@ -126,5 +127,5 @@ if __name__ == "__main__":
     print(
         f"\n✅ Found {len(requested_tools)} unique tools requested in the last {days} days:\n"
     )
-    for tool in requested_tools:
-        print(f"- {tool}")
+    for tool, calls in requested_tools.items():
+        print(f"- {tool} called {calls} time(s)")
