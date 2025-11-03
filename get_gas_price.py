@@ -62,6 +62,9 @@ if __name__ == "__main__":
         fees.append(fee_eth)
         print(f"{i}. Fee: {fee_eth:.8f} ETH at {timestamp} | Hash: {tx['hash']}")
 
+    average_fees = sum(fees) / len(fees)
+    average_fees_usd = eth_to_usd(average_fees) if CHAIN_ID != "100" else average_fees
+
     print(
-        f"Average Gas Fee for last {len(fees)} transactions: {sum(fees) / len(fees):.8f} ETH       {(sum(fees) / len(fees)) * (eth_to_usd(1) if CHAIN_ID!='100' else 1):.8f} USD"
+        f"Average Gas Fee for last {len(fees)} transactions: {sum(fees) / len(fees):.8f} ETH       {average_fees_usd:.8f} USD"
     )
