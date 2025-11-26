@@ -1,0 +1,11 @@
+[tool.poetry]
+name = "random-valory-scripts"
+version = "0.1.0"
+description = "Add your description here"
+authors = ["Jenslee Dsouza <jenslee.dsouza@valory.xyz>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4"
+web3 = ">=6.0.0"
+dotenv = ">=0.9.9,<0.10.0"
