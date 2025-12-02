@@ -20,7 +20,7 @@ REALITIO = Web3.to_checksum_address("0x79e32aE03fb27B07C89c0c568F80287C01ca2E57"
 
 DAYS = 1  # scan last N days
 
-CREATOR_TO_TRACK = "0xFfc8029154ECD55ABED15BD428bA596E7D23f557"
+CREATOR_TO_TRACK = "0x89c5cc945dd550BcFfb72Fe42BfF002429F46Fec"
 # -------------------------------------------------------------------
 # ABIs (minimal)
 # -------------------------------------------------------------------
@@ -170,6 +170,7 @@ print("==============================================")
 print("      MARKETS (mapped to questions)")
 print("==============================================\n")
 
+no_of_markets = 0
 for m in markets:
     args = m["args"]
     market_addr = args["fixedProductMarketMaker"]
@@ -202,3 +203,5 @@ for m in markets:
     # print(f"Timestamp:  {created_ist}\t|\t{created_utc}")
     print(f"Date:       {date}")
     print()
+    no_of_markets += 1
+print(f"Total markets by {CREATOR_TO_TRACK}: {no_of_markets}")
