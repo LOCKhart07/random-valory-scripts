@@ -7,23 +7,36 @@ import requests
 dotenv.load_dotenv()
 
 ETHERSCAN_API_KEY = os.environ["ETHERSCAN_API_KEY"]
-ADDRESS = "0x12a9a43b97985f160b1ca4f28b4bb8fe359aa21b"
+ADDRESS = "0x12A9a43b97985F160B1ca4F28B4bb8fe359Aa21b"
+# ADDRESS = "0x350817A0aE17FA392d9aBf4AD438407521cB23AD"
 CHAIN_ID = "100"  # Gnosis
 # CHAIN_ID = "10"  # Optimism
-LIMIT = 200
+# CHAIN_ID = "8453"  # Base
+# CHAIN_ID = "137"  # Polygon
+LIMIT = 500
 
 
-def eth_to_usd(eth_amount):
-    # Fetch ETH price in USD
+def get_native_token_price_usd(chain_id):
+    """Get the native token price in USD for the given chain."""
+    # Map chain IDs to CoinGecko token IDs
+    token_map = {
+        "1": "ethereum",  # Ethereum
+        "10": "ethereum",  # Optimism (uses ETH)
+        "100": "xdai",  # Gnosis (uses xDAI, which is ~$1)
+        "137": "polygon-ecosystem-token",  # Polygon (uses POL, formerly MATIC)
+        "8453": "ethereum",  # Base (uses ETH)
+    }
+
+    token_id = token_map.get(chain_id, "ethereum")
+
+    # Fetch token price in USD
     url = "https://api.coingecko.com/api/v3/simple/price"
-    params = {"ids": "ethereum", "vs_currencies": "usd"}
+    params = {"ids": token_id, "vs_currencies": "usd"}
     resp = requests.get(url, params=params)
     resp.raise_for_status()
-    price_usd = resp.json()["ethereum"]["usd"]
+    price_usd = resp.json()[token_id]["usd"]
 
-    # Convert
-    usd_value = eth_amount * price_usd
-    return usd_value
+    return price_usd
 
 
 def get_transactions(address, chain_id, limit=200):
@@ -63,8 +76,19 @@ if __name__ == "__main__":
         print(f"{i}. Fee: {fee_eth:.8f} ETH at {timestamp} | Hash: {tx['hash']}")
 
     average_fees = sum(fees) / len(fees)
-    average_fees_usd = eth_to_usd(average_fees) if CHAIN_ID != "100" else average_fees
+    token_price_usd = get_native_token_price_usd(CHAIN_ID)
+    average_fees_usd = average_fees * token_price_usd
+
+    # Get native token name for display
+    token_names = {
+        "1": "ETH",
+        "10": "ETH",
+        "100": "xDAI",
+        "137": "POL",
+        "8453": "ETH",
+    }
+    token_name = token_names.get(CHAIN_ID, "ETH")
 
     print(
-        f"Average Gas Fee for last {len(fees)} transactions: {sum(fees) / len(fees):.8f} ETH       {average_fees_usd:.8f} USD"
+        f"Average Gas Fee for last {len(fees)} transactions: {average_fees:.8f} {token_name}       {average_fees_usd:.8f} USD"
     )
