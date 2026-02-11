@@ -72,6 +72,7 @@ query GetPolymarketTraderAgentBets($id: ID!) {
         }
       }
       amount
+      shares
     }
   }
 }
@@ -172,6 +173,15 @@ def get_accuracy_and_roi_for_agent(agent_safe_address):
     avg_bet_amount = (
         (sum(int(bet.get("amount", 0)) for bet in bets) / len(bets)) if bets else 0
     )
+    share_prices = [
+        (
+            int(bet.get("amount", 0)) / int(bet.get("shares", 1))
+            if int(bet.get("shares", 0)) > 0
+            else 0
+        )
+        for bet in bets
+    ]
+    avg_share_price = (sum(share_prices) / len(share_prices)) if share_prices else 0
     trader_agent = fetch_trader_agent(agent_safe_address)
     roi = calculate_partial_roi(trader_agent)
     if accuracy is None or roi is None:
@@ -183,7 +193,7 @@ def get_accuracy_and_roi_for_agent(agent_safe_address):
         #     f"Agent {agent_safe_address} has an accuracy of {accuracy:.2f}% with {len(bets)} bets"
         # )
         print(
-            f"Agent {agent_safe_address} has an accuracy of {accuracy:.2f}% with {len(resolved_bets)}/{len(bets)} resolved bets and a partial ROI of {roi:.2f}%. AVG bet amount: {(avg_bet_amount/USDC_DECIMALS_DIVISOR):2f} USDC"
+            f"Agent {agent_safe_address} has an accuracy of {accuracy:.2f}% with {len(resolved_bets)}/{len(bets)} resolved bets and a partial ROI of {roi:.2f}%. AVG bet amount: {(avg_bet_amount/USDC_DECIMALS_DIVISOR):2f} USDC and AVG share price: {avg_share_price:.2f} USDC"
         )
     return accuracy, roi
 
