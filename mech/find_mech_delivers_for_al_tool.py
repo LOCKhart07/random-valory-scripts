@@ -88,7 +88,7 @@ if __name__ == "__main__":
     with open(LOG_FILE, "w") as f:
         f.write("")
 
-    contract_address = "0xdb78159e9246EC738F51c2c9cb1169b5C0e45fee"
+    contract_address = "0x601024E27f1C67B28209E24272CED8A31fc8151F"
     days = 1
     tool_to_find = "resolve-market-reasoning-gpt-4.1"
     find_tx_by_request_id(

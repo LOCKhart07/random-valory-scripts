@@ -48,7 +48,7 @@ PREDICT_OMEN_URL = "https://api.subgraph.staging.autonolas.tech/api/proxy/predic
 QUESTION_DATA_SEPARATOR = "\u241f"
 
 # Disk cache TTL: re-fetch if cached data is older than this
-CACHE_TTL_SECONDS = 3 * 60 * 60  # 3 hours
+CACHE_TTL_SECONDS = 12 * 60 * 60  # 12 hours
 
 # Disk cache file – different name to avoid clashing with tool_accuracy.py's cache
 _CACHE_FILE = Path(__file__).parent / ".tool_accuracy_timeline_cache.json"

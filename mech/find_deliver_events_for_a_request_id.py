@@ -112,8 +112,8 @@ if __name__ == "__main__":
     # Clean up log file
     with open(LOG_FILE, "w") as f:
         f.write("")
-    request_id = "0x80ca0e30de873a8a4ba0299751a24ac7cd618faf14ba8b681e0680e68c0eaa1e"
+    request_id = "93F6C63A51A7ACD66007AF3F704F3A1E38205B96A54A9AEDEA7639CA914BFE46"
 
-    contract_address = "0xC05e7412439bD7e91730a6880E18d5D5873F632C"
-    days = 2
+    contract_address = "0xdb78159e9246EC738F51c2c9cb1169b5C0e45fee"
+    days = 3
     find_tx_by_request_id(request_id, days, contract_address)

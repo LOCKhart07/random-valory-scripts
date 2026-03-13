@@ -1,8 +1,7 @@
 import os
-from datetime import datetime, timezone
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import lru_cache
-from collections import defaultdict
 
 import requests
 from dotenv import load_dotenv
@@ -19,11 +18,11 @@ if not GNOSIS_RPC:
     raise ValueError("Please set the GNOSIS_RPC environment variable.")
 
 EVENT_SIGNATURE = "Request(address,bytes32,bytes)"
-EVENT_TOPIC = Web3.keccak(text=EVENT_SIGNATURE).hex()
+EVENT_TOPIC = Web3.keccak(text=EVENT_SIGNATURE).to_0x_hex()
 
 # Average block time on Gnosis (≈5s)
 BLOCK_TIME_SECONDS = 5
-MAX_BLOCK_SPAN = 20_000  # Max per getLogs call
+MAX_BLOCK_SPAN = 5000  # Max per getLogs call
 
 LOG_FILE = "request_events.log"
 
@@ -40,7 +39,7 @@ def ipfs_request(ipfs_link: str):
 
 
 @lru_cache(maxsize=None)
-def fetch_tool_from_ipfs(request_data_hex: str):
+def fetch_tool_from_ipfs(request_data_hex: str, tx_hash: str = None):
     base_ipfs_link = f"http://gateway.autonolas.tech/ipfs/f01701220{request_data_hex}"
     urls_to_try = [f"{base_ipfs_link}/metadata.json", base_ipfs_link]
 
@@ -48,11 +47,15 @@ def fetch_tool_from_ipfs(request_data_hex: str):
         try:
             tool = ipfs_request(url)
             if tool:
+                if "claude" in tool.lower():
+                    print(
+                        f"⚠️  Found 'claude' in tool name from IPFS: {base_ipfs_link} (tx {tx_hash})"
+                    )
                 return tool
-        except Exception as e:
+        except Exception:
             continue  # silently try next URL
 
-    print(f"❌ Failed to fetch tool from IPFS: {base_ipfs_link}")
+    print(f"❌ Failed to fetch tool from IPFS: {base_ipfs_link} for tx {tx_hash}")
     return None
 
 
@@ -98,6 +101,7 @@ def get_all_tool_ids(days=7, contract_address=None, from_block=None, max_workers
                 executor.submit(
                     fetch_tool_from_ipfs,
                     decode(["bytes32", "bytes"], log["data"])[1].hex(),
+                    log["transactionHash"].hex(),
                 ): log
                 for log in logs
             }
@@ -118,14 +122,15 @@ if __name__ == "__main__":
     with open(LOG_FILE, "w") as f:
         f.write("")
 
-    contract_address = "0xC05e7412439bD7e91730a6880E18d5D5873F632C"
+    contract_address = "0xdb78159e9246EC738F51c2c9cb1169b5C0e45fee"
     days = 3
     requested_tools = get_all_tool_ids(
         days, contract_address, from_block=None, max_workers=20
     )
 
+    total_calls = sum(requested_tools.values())
     print(
-        f"\n✅ Found {len(requested_tools)} unique tools requested in the last {days} days:\n"
+        f"\n✅ Found {len(requested_tools)} unique tools requested in the last {days} days across {total_calls} total mech calls:\n"
     )
     for tool, calls in requested_tools.items():
         print(f"- {tool} called {calls} time(s)")

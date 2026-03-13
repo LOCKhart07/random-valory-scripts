@@ -90,7 +90,7 @@ def fetch_last_bets(n: int = 100, batch_size: int = 1000) -> list[dict]:
     """
     headers = {"Content-Type": "application/json"}
     all_raw_bets: list[dict] = []
-    skip = 0
+    skip = 50000
 
     while len(all_raw_bets) < n:
         first = min(batch_size, n - len(all_raw_bets))

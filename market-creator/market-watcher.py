@@ -19,10 +19,10 @@ w3 = Web3(Web3.HTTPProvider(RPC_URL))
 FACTORY = Web3.to_checksum_address("0x9083A2B699c0a4AD06F63580BDE2635d26a3eeF0")
 REALITIO = Web3.to_checksum_address("0x79e32aE03fb27B07C89c0c568F80287C01ca2E57")
 
-DAYS = 14  # scan last N days
+DAYS = 3  # scan last N days
 
-CREATOR_TO_TRACK = "0x89c5cc945dd550BcFfb72Fe42BfF002429F46Fec"  # QS
-# CREATOR_TO_TRACK = "0xFfc8029154ECD55ABED15BD428bA596E7D23f557"  # Pearl
+# CREATOR_TO_TRACK = "0x89c5cc945dd550BcFfb72Fe42BfF002429F46Fec"  # QS
+CREATOR_TO_TRACK = "0xFfc8029154ECD55ABED15BD428bA596E7D23f557"  # Pearl
 # -------------------------------------------------------------------
 # ABIs (minimal)
 # -------------------------------------------------------------------

@@ -9,3 +9,6 @@ package-mode = false
 python = ">=3.12,<4"
 web3 = ">=6.0.0"
 dotenv = ">=0.9.9,<0.10.0"
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^7.2.0"
+
