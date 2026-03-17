@@ -28,6 +28,24 @@ Verified directly on-chain via `TransferSingle` events on the ConditionalTokens 
 
 **None of the 27 broken senders have received a single conditional token transfer in 14 days**, confirming they are not placing any bets on Omen. All 4 healthy senders sampled have active betting activity (50–268 transfers each).
 
+## Scope: Isolated to Mech 0xC05e
+
+Checked all Gnosis mechs from the deployments directory (7-day window). The issue is entirely contained to `0xC05e`:
+
+| Mech | Deployment | 7d Requests | Parsed | Unparsed | Status |
+|---|---|---|---|---|---|
+| `0xC05e...632C` | mech_mm_predict | 11,425 | 1,285 | 10,140 (89%) | 27 broken senders |
+| `0x6010...151F` | mech_mm_predict_clone | 33,107 | 33,107 | 0 (0%) | Clean |
+| `0xdb78...5fee` | single_2340 | 70 | 70 | 0 | Clean |
+| `0x818d...0711` | single_2359 | 196 | 196 | 0 | Clean |
+| `0x552c...d053` | legacy_mm | 0 | - | - | Inactive |
+| `0x45b7...97d0` | legacy_mm_clone | 0 | - | - | Inactive |
+| `0x11C4...F1Bc` | single_2360 | 0 | - | - | Inactive |
+| `0xB3C6...2101` | single_2235 | 1 | 1 | 0 | Minimal |
+| `0x1cAe...d9dC` | nvm_2469 | 0 | - | - | Inactive |
+
+The busiest mech (`mech_mm_predict_clone`, 33k requests/week) has zero unparsed requests. The 27 broken senders are only targeting `0xC05e`.
+
 ## Root Cause
 
 The broken senders emit valid `Request(address,bytes32,bytes)` events on-chain, but the 32-byte `requestData` field does **not** correspond to pinned IPFS content. When the IPFS gateway attempts to resolve the hash, it returns:
