@@ -5,7 +5,7 @@
 
 ## Executive Summary
 
-27 agent services are sending mech requests with invalid IPFS data to mech `0xC05e...632C`, accounting for **88.5% of the mech's traffic** over the past 7 days. These services have **never placed a single trade** on Omen. The evidence strongly suggests they are modified OmenStrat agents designed to generate mech request activity solely to qualify for OLAS staking rewards — an OLAS mining abuse pattern.
+27 agent services are sending mech requests with invalid IPFS data to mech `0xC05e...632C`, accounting for **88.8% of the mech's traffic** over the past 14 days. These services have **zero conditional token transfers** (no bets placed) over the same period. Whether this is deliberate gaming or misconfigured agents, the outcome is the same: they generate staking-qualifying mech activity without performing any useful prediction work.
 
 ## Scale of the Problem
 
@@ -44,7 +44,7 @@ Both broken and healthy transactions produce identical log structures (6 logs ea
 
 ## Service & Staking Analysis
 
-All 27 broken senders are Safe multisig contracts (agent services). They all use **agent ID 25** and cluster into 3 config hashes, indicating 3 slightly different versions of the same modified agent.
+All 27 broken senders are Safe multisig contracts (agent services). They all use **agent ID 25** and cluster into 3 on-chain config hashes.
 
 ### Config Hash & Agent Code Analysis
 
@@ -143,15 +143,30 @@ Each broken multisig has a unique EOA operator (27 total). Sample mapping:
 | `0x296f30eae0a8...` | `0x9a3c...` (Svc 2015) |
 | ... | (24 more, all unique) |
 
+## Interpretation
+
+Two possible explanations for this behavior:
+
+### Scenario A: Deliberate Gaming
+The operators intentionally modified their agents (or their environment) to skip IPFS pinning, generating cheap mech request activity to qualify for OLAS staking rewards without spending resources on actual prediction work or betting.
+
+### Scenario B: Misconfigured Agents
+The operators' IPFS gateway or pinning service is broken/unreachable. The agent attempts to send a real mech request but fails at the pinning step, submits a local hash instead, receives a garbage mech response it can't parse, and therefore never reaches the betting step. The agent keeps retrying on its normal cycle, producing the same on-chain footprint as deliberate gaming.
+
+**We cannot distinguish between these scenarios from on-chain data alone.** However, in either case:
+- The services are consuming 88.8% of the mech's request capacity with unusable requests
+- They are earning staking rewards without performing any useful prediction work
+- The oldest cohort (12 services, ~270k lifetime requests) has been in this state for a very long time without the operators noticing or fixing the issue
+
 ## Conclusions
 
-1. **OLAS mining abuse confirmed**: 27 services generate fake mech request activity without placing any bets, purely to earn staking rewards.
+1. **27 services are non-functional**: Whether by design or by misconfiguration, these services generate mech request activity without valid IPFS data and without placing any bets.
 
-2. **On-chain config hashes are not evidence of code modification**: The on-chain agent hash only reflects what was registered at service creation, not what's actually running. The operators can run arbitrary code locally. We cannot determine from on-chain data alone whether the agent code was modified — only that the behavior (no IPFS pinning, no bets, garbage request data) is clearly abnormal.
+2. **On-chain config hashes are not evidence of code modification**: The on-chain agent hash only reflects what was registered at service creation, not what's actually running. We cannot determine from on-chain data alone whether the agent code was modified.
 
-3. **Systematic operation**: The uniform 63 requests/day cadence, time-windowed cohorts, and spread across 5 staking contracts indicate a deliberate, organized operation.
+3. **Systematic pattern**: The uniform 63 requests/day cadence, time-windowed cohorts, and spread across 5 staking contracts suggest coordinated operation by one or a small number of operators.
 
-4. **Impact**: These services consume 88.5% of the mech's request capacity, generate ~276k OLAS in potential staking rewards, and pollute the subgraph data with unparseable requests.
+4. **Impact**: These services consume 88.8% of the mech's request capacity, are staked in contracts with ~276k OLAS in available rewards, and pollute the subgraph data with unparseable requests.
 
 ---
 
