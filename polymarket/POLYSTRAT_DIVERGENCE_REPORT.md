@@ -150,12 +150,14 @@ SF helps (43% profitable vs 15-20%) but is not a guarantee. Some zero-SF agents 
 
 ### 6. Deep Mechanism Analysis (`analyze_persistence_deep.py`)
 
-**H1: Accuracy Store Feedback Loop — CONFIRMED but mechanism was wrong**
-- Original simulation (from empty store): lock-in round mean=64, median=36
-- **Corrected finding:** Lock-in is instant — the IPFS store pre-loads PRR as best_tool (see Section 8)
-- The "lock-in at 36 bets" was an artifact of simulating from an empty store, not what agents actually experience
-- Early luck (first 10 bets accuracy) vs final PnL: rho=0.282 — still valid, early wins/losses compound
-- Only 2/75 agents end up with PRR as best tool in their **simulated** store (doesn't reflect the real pre-loaded store)
+**H1: Accuracy Store Feedback Loop — CONFIRMED (corrected with real IPFS store initialization)**
+- **100% of agents start with PRR as `best_tool`** — determined by the pre-loaded IPFS accuracy store
+- SF can overtake PRR once it accumulates a few winning bets (SF's real 72.6% accuracy exceeds PRR's stored 67.1% + volume bonus ≈ 70%), but it only gets ~2.5% selection rate via exploration
+- **61% of agents (50/82) eventually see SF overtake PRR** in the store, at median bet #50
+- **39% of agents never switch** — they either didn't get enough SF exploration bets, or SF's early bets were losses
+- Final best_tool distribution: PRR 55% (45 agents), SF 45% (37 agents)
+- The bottom 3 agents by PnL ALL ended up with SF as best_tool — but the losses accumulated during the PRR-dominant early phase couldn't be recovered
+- Early luck (first 10 bets accuracy) vs final PnL: rho=0.263
 
 **H2: Kelly Dynamic Fraction Amplification — MINOR**
 - Dynamic fraction range: 1.516-1.519 (barely varies)
@@ -287,7 +289,7 @@ Note: `prediction-offline-sme` (70.49%, 61 requests) is in the CSV but filtered 
 
 2. **PRR is selected on 75-80% of bets from bet #1.** This is not gradual lock-in — it's the default state. On-chain data shows 83% of agents use PRR on their literal first bet. The epsilon-greedy policy selects `best_tool` (PRR) during the 75% exploitation phase and picks randomly among ~10 tools during the 25% exploration phase. This means PRR gets ~77.5% of all bets and SF gets ~2.5%.
 
-3. **SF rarely gets enough exposure to overtake PRR.** Even with 73.4% real accuracy vs PRR's 63.1%, SF starts at 0/0 in the store. At ~2.5% selection rate, an agent making 500 bets gives SF only ~12-13 bets. That's too few for SF's stored accuracy to reliably overtake PRR's pre-loaded 67.1% + volume bonus. The few agents with higher SF usage got lucky with early exploration picks that happened to land on SF.
+3. **SF can overtake PRR, but only after ~50 bets.** SF's real accuracy (72.6%) exceeds PRR's stored weighted accuracy (~70%), so even 1-2 SF wins are enough to make SF the store's best_tool. But at ~2.5% exploration rate, it takes a median of 50 bets to accumulate enough SF selections. 61% of agents eventually see SF overtake PRR; 39% never do (bad luck on their few SF exploration picks). By the time SF takes over, agents have already lost money on ~40 PRR bets.
 
 4. **PRR's 63% accuracy bleeds money at fleet prices.** PRR is below breakeven at 71% of the price ranges it encounters. The accuracy looks decent in isolation but is insufficient at the prices being paid. The store never self-corrects because PRR's accuracy isn't bad enough to trigger quarantine — just bad enough to lose at the odds offered.
 

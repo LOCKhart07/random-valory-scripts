@@ -72,6 +72,23 @@ UNSCALED_RANGE = (-0.5, 80.5)
 SCALED_RANGE = (0.0, 1.0)
 QUARANTINE_DURATION_SECONDS = 10800  # 3 hours
 
+# Pre-loaded IPFS accuracy store (QmR8etyW3TPFadNtNrW54vfnFqmh8vBrMARWV76EmxCZyk)
+# From polymarket_trader/service.yaml tools_accuracy_hash, April–June 2024 Omen data.
+# Accuracy stored as ratio (0-1). prediction-offline-sme filtered by irrelevant_tools.
+IPFS_ACCURACY_STORE = {
+    "prediction-request-reasoning": {"requests": 17372, "accuracy": 0.6711},
+    "prediction-online-sme": {"requests": 14642, "accuracy": 0.6567},
+    "prediction-online": {"requests": 9490, "accuracy": 0.6601},
+    "prediction-request-rag-claude": {"requests": 7428, "accuracy": 0.6564},
+    "prediction-offline": {"requests": 4465, "accuracy": 0.6741},
+    "prediction-request-rag": {"requests": 2691, "accuracy": 0.6358},
+    "prediction-request-reasoning-claude": {"requests": 2470, "accuracy": 0.6672},
+    "prediction-url-cot-claude": {"requests": 1596, "accuracy": 0.6190},
+    "claude-prediction-online": {"requests": 1055, "accuracy": 0.6114},
+    "claude-prediction-offline": {"requests": 481, "accuracy": 0.5738},
+    # superforcaster: NOT in IPFS CSV, added at startup with defaults
+}
+
 
 # ---------------------------------------------------------------------------
 # Helpers replicated from trader codebase
@@ -325,6 +342,10 @@ def simulate_accuracy_store(agent_bets, agent_tools):
     Replay each agent's resolved bets chronologically and reconstruct the
     accuracy store trajectory. Track when best_tool locks in and how
     weighted_accuracy diverges.
+
+    The store is initialized with the real IPFS accuracy CSV data
+    (QmR8etyW3TPFadNtNrW54vfnFqmh8vBrMARWV76EmxCZyk) that agents load
+    at startup. Tools not in the CSV (e.g. superforcaster) start at 0/0.
     """
     results = {}
 
@@ -343,14 +364,29 @@ def simulate_accuracy_store(agent_bets, agent_tools):
         if not used_tools:
             continue
 
-        # Initialize accuracy store (all zeros, like a fresh agent)
-        store = {tool: {"requests": 0, "accuracy": 0.0} for tool in used_tools}
+        # Initialize accuracy store to match what the real agent has at startup:
+        # 1. ALL tools from the IPFS CSV (pre-loaded via _overwrite_local_info)
+        # 2. Plus any tools the agent used that aren't in the CSV (e.g. superforcaster),
+        #    added via setdefault with 0/0 (just like storage_manager.py line 402)
+        # This is important because weighted_accuracy divides by total n_requests
+        # across ALL tools, not just the ones the agent happened to use.
+        store = {}
+        for tool, info in IPFS_ACCURACY_STORE.items():
+            store[tool] = {"requests": info["requests"], "accuracy": info["accuracy"]}
+        for tool in used_tools:
+            if tool not in store:
+                store[tool] = {"requests": 0, "accuracy": 0.0}
+
+        # Record initial best_tool before any bets
+        initial_weighted = compute_weighted_accuracy(store)
+        initial_best = max(initial_weighted, key=initial_weighted.get) if initial_weighted else None
 
         best_tool_history = []
         weighted_acc_history = []  # weighted_accuracy of best tool over time
         lock_in_round = -1
-        last_best = None
+        last_best = initial_best
         last_change_round = 0
+        best_changed_from_initial = False
 
         for i, bet in enumerate(resolved):
             tool = tools_map.get(bet["bet_id"], "unknown")
@@ -374,6 +410,8 @@ def simulate_accuracy_store(agent_bets, agent_tools):
             if best != last_best:
                 last_best = best
                 last_change_round = i
+                if best != initial_best:
+                    best_changed_from_initial = True
 
         if best_tool_history:
             lock_in_round = last_change_round
@@ -388,7 +426,9 @@ def simulate_accuracy_store(agent_bets, agent_tools):
         results[addr] = {
             "n_resolved": len(resolved),
             "lock_in_round": lock_in_round,
+            "initial_best_tool": initial_best,
             "final_best_tool": best_tool_history[-1] if best_tool_history else None,
+            "best_changed_from_initial": best_changed_from_initial,
             "final_weighted_acc": weighted_acc_history[-1] if weighted_acc_history else None,
             "early_accuracy": round(early_acc, 1),
             "total_pnl": round(total_pnl, 2),
@@ -687,28 +727,50 @@ def print_report(store_results, kelly_results, quarantine_results,
     print("=" * w)
 
     # --- H1: Accuracy Store ---
-    print("\n--- H1: ACCURACY STORE FEEDBACK LOOP ---")
+    print("\n--- H1: ACCURACY STORE FEEDBACK LOOP (with real IPFS store initialization) ---")
     if store_results:
         lock_ins = [r["lock_in_round"] for r in store_results.values()]
         early_accs = [r["early_accuracy"] for r in store_results.values()]
         pnls = [r["total_pnl"] for r in store_results.values()]
 
         print(f"  Agents simulated: {len(store_results)}")
-        print(f"  Store lock-in round: mean={statistics.mean(lock_ins):.0f}, "
-              f"median={statistics.median(lock_ins):.0f}, "
-              f"range=[{min(lock_ins)}-{max(lock_ins)}]")
+        print(f"  Store initialized from: IPFS CSV QmR8etyW3TPF... (Omen Apr-Jun 2024)")
 
-        rho = spearman(early_accs, pnls)
-        print(f"  Early luck (first 10 bets accuracy) vs final PnL: rho={rho}")
+        # Initial best tool (before any bets)
+        initial_tools = defaultdict(int)
+        for r in store_results.values():
+            if r.get("initial_best_tool"):
+                initial_tools[r["initial_best_tool"]] += 1
+        print(f"\n  Initial best_tool (from IPFS store, before any bets):")
+        for tool, count in sorted(initial_tools.items(), key=lambda x: -x[1]):
+            pct = count / len(store_results) * 100
+            print(f"    {tool}: {count} agents ({pct:.0f}%)")
+
+        # How many agents ever changed best_tool from initial
+        changed = sum(1 for r in store_results.values() if r.get("best_changed_from_initial"))
+        unchanged = len(store_results) - changed
+        print(f"\n  Agents where best_tool changed from initial: {changed}/{len(store_results)} ({changed/len(store_results)*100:.0f}%)")
+        print(f"  Agents where best_tool NEVER changed: {unchanged}/{len(store_results)} ({unchanged/len(store_results)*100:.0f}%)")
+
+        # For those that changed, when?
+        change_rounds = [r["lock_in_round"] for r in store_results.values()
+                         if r.get("best_changed_from_initial")]
+        if change_rounds:
+            print(f"  When best_tool changed: mean bet #{statistics.mean(change_rounds):.0f}, "
+                  f"median #{statistics.median(change_rounds):.0f}")
 
         # Final best tool distribution
         final_tools = defaultdict(int)
         for r in store_results.values():
             if r["final_best_tool"]:
                 final_tools[r["final_best_tool"]] += 1
-        print("\n  Final best_tool distribution across agents:")
+        print(f"\n  Final best_tool distribution (after all bets):")
         for tool, count in sorted(final_tools.items(), key=lambda x: -x[1]):
-            print(f"    {tool}: {count} agents")
+            pct = count / len(store_results) * 100
+            print(f"    {tool}: {count} agents ({pct:.0f}%)")
+
+        rho = spearman(early_accs, pnls)
+        print(f"\n  Early luck (first 10 bets accuracy) vs final PnL: rho={rho}")
 
         # Top 5 vs bottom 5 by PnL
         sorted_agents = sorted(store_results.items(), key=lambda x: x[1]["total_pnl"])
@@ -717,13 +779,13 @@ def print_report(store_results, kelly_results, quarantine_results,
         print("\n  Top 5 agents by PnL:")
         for addr, r in reversed(top5):
             print(f"    {addr[:14]}... | PnL=${r['total_pnl']:>7.2f} | "
-                  f"best_tool={r['final_best_tool']} | early_acc={r['early_accuracy']}% | "
-                  f"lock_in_round={r['lock_in_round']}")
+                  f"initial={r.get('initial_best_tool', '?')}, final={r['final_best_tool']} | "
+                  f"changed={r.get('best_changed_from_initial', False)}")
         print("  Bottom 5 agents by PnL:")
         for addr, r in bottom5:
             print(f"    {addr[:14]}... | PnL=${r['total_pnl']:>7.2f} | "
-                  f"best_tool={r['final_best_tool']} | early_acc={r['early_accuracy']}% | "
-                  f"lock_in_round={r['lock_in_round']}")
+                  f"initial={r.get('initial_best_tool', '?')}, final={r['final_best_tool']} | "
+                  f"changed={r.get('best_changed_from_initial', False)}")
 
         if rho and rho > 0.2:
             print("  >> FINDING: Early luck DOES predict lifetime PnL. The feedback loop is real.")
