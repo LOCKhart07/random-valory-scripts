@@ -254,6 +254,31 @@ Note: `prediction-offline-sme` (70.49%, 61 requests) is in the CSV but filtered 
 
 **Conclusion:** Lock-in is not a gradual process. It is instantaneous — determined by the IPFS accuracy store before a single bet is placed. The "~36 bet lock-in" from the earlier simulation was an artifact of starting from an empty store. The real question is not "when does lock-in happen" but "why does the IPFS store favor PRR." Answer: stale Omen-era volume counts in the regularization term.
 
+### 9. Cross-Market Accuracy Comparison (`generate_accuracy_csv.py`)
+
+**Tool rankings are market-specific.** Generating fresh accuracy CSVs from on-chain data for both markets reveals that the same tools perform very differently on Omen vs Polymarket:
+
+| Tool | IPFS Store (Omen Apr-Jun '24) | Omen (Feb '26) | Polymarket (all time) |
+|---|---|---|---|
+| superforcaster | N/A | 57.84% | **72.58%** |
+| prediction-request-reasoning-claude | 66.72% | **63.53%** | 67.53% |
+| prediction-offline | **67.41%** | 62.47% | 64.67% |
+| prediction-request-reasoning | 67.11% | 56.25% | 62.33% |
+| claude-prediction-offline | 57.38% | 52.88% | 66.50% |
+| prediction-online | 66.01% | 43.99% | 60.22% |
+| prediction-online-sme | 65.67% | 32.37% | 60.91% |
+| prediction-request-rag-claude | 65.64% | 29.28% | 62.92% |
+| claude-prediction-online | 61.14% | 27.30% | 62.71% |
+| prediction-request-rag | 63.58% | 43.15% | 55.14% |
+
+**Key observations:**
+- **SF dominates Polymarket (72.6%) but is mediocre on Omen (57.8%).** Tool performance is market-dependent.
+- **The old IPFS CSV is stale for both markets.** Most tools dropped 5-35 percentage points on recent Omen data vs the Apr-Jun 2024 snapshot. Half the tools (prediction-online-sme, prediction-request-rag-claude, claude-prediction-online) collapsed to below 33%.
+- **A single accuracy CSV for both Omen and Polymarket services would be wrong.** The `tools_accuracy_hash` in service.yaml should be market-specific.
+- **Updated CSVs have been generated and pinned to IPFS:**
+  - Polymarket: `QmdNF1cidJASsVKSnbvSSmZLLaYfBPixBzpT4Pw3ZvmYTu`
+  - Omen: `tool-accuracy/tools_accuracy_omen.csv` (pin with `--pin` flag)
+
 ---
 
 ## The Persistence Mechanism (Full Chain) — REVISED
@@ -276,11 +301,20 @@ Note: `prediction-offline-sme` (70.49%, 61 requests) is in the CSV but filtered 
 
 ## Recommended Fixes (by estimated impact)
 
-### 1. Update or remove the IPFS accuracy store (HIGHEST IMPACT — root cause fix)
-The IPFS CSV (`QmR8etyW3TPFadNtNrW54vfnFqmh8vBrMARWV76EmxCZyk`) contains stale Omen-era data from April–June 2024. It doesn't include superforcaster at all. Three options:
-- **Option A:** Update the CSV to include SF with its actual Polymarket accuracy (73.4%) and representative request counts. This immediately makes SF competitive in the weighted accuracy ranking.
-- **Option B:** Start agents with an empty store so all tools compete fairly during exploration. This means agents would explore randomly for the first period before the store has data.
-- **Option C:** Remove the volume regularization term (`0.1 * requests/total`). Without it, `prediction-offline` (67.41%) beats PRR (67.11%) by raw accuracy. This doesn't help SF directly but at least removes the stale-volume bias.
+### 1. Update the IPFS accuracy store per market (HIGHEST IMPACT — root cause fix)
+The IPFS CSV (`QmR8etyW3TPFadNtNrW54vfnFqmh8vBrMARWV76EmxCZyk`) contains stale Omen-era data from April–June 2024. It doesn't include superforcaster at all, and tool rankings have shifted dramatically since then — even on Omen itself.
+
+**Updated CSVs generated from on-chain data:**
+- **Polymarket:** `QmdNF1cidJASsVKSnbvSSmZLLaYfBPixBzpT4Pw3ZvmYTu` — SF is #1 at 72.6%
+- **Omen:** generate with `python tool-accuracy/generate_accuracy_csv.py --pin` — `prediction-request-reasoning-claude` is #1 at 63.5%, SF is 57.8%
+
+**These must be separate hashes per service.** Tool performance is market-specific (SF is 72.6% on Polymarket vs 57.8% on Omen). Using a single CSV across both services will bias one market's agents toward the wrong tool. The `polymarket_trader/service.yaml` and `trader/service.yaml` should each have their own `tools_accuracy_hash`.
+
+Scripts to regenerate:
+```bash
+python polymarket/generate_accuracy_csv.py --pin         # Polymarket
+python tool-accuracy/generate_accuracy_csv.py --pin      # Omen
+```
 
 ### 2. Tighten price filter from 0.80 to 0.70 (~$665 savings)
 Both tails (below 0.30 and above 0.70) are deeply negative EV. The filter already works symmetrically — setting it to 0.70 cuts bets where one side is above 0.70 OR below 0.30. This eliminates the worst-performing price ranges with zero code complexity.
@@ -298,7 +332,7 @@ The $2.50 max bet hits on longshot bets where the model is wrong 90% of the time
 
 ## Scripts Created
 
-All scripts are in `polymarket/` and run standalone:
+Analysis scripts are in `polymarket/`, accuracy CSV generators in both `polymarket/` and `tool-accuracy/`:
 
 ```bash
 # Fleet-wide divergence analysis
@@ -316,7 +350,13 @@ python polymarket/analyze_persistence_deep.py
 # IPFS accuracy store verification — checks on-chain tool usage vs pre-loaded store
 python polymarket/verify_lockin.py --sample 30
 
-# All support --json, --no-charts, --no-tools, --min-bets flags
+# Generate updated accuracy CSV from on-chain data and pin to IPFS
+python polymarket/generate_accuracy_csv.py --pin                          # Polymarket
+python polymarket/generate_accuracy_csv.py --from 2026-03-01 --pin        # Polymarket, recent
+python tool-accuracy/generate_accuracy_csv.py --pin                       # Omen
+python tool-accuracy/generate_accuracy_csv.py --from 2026-01-01 --pin     # Omen, recent
+
+# Analysis scripts support --json, --no-charts, --no-tools, --min-bets flags
 ```
 
 ---
@@ -324,8 +364,10 @@ python polymarket/verify_lockin.py --sample 30
 ## Data Sources
 
 - Polymarket bets subgraph (`predict-polymarket-agents.subgraph.autonolas.tech`)
+- Omen bets subgraph (`predict-omen`, staging)
 - Polygon registry subgraph (The Graph, agentId=86)
-- Polygon marketplace subgraph (`marketplace-polygon`) for mech tool matching
+- Polygon marketplace subgraph (`marketplace-polygon`) for Polymarket mech tool matching
+- Gnosis marketplace subgraph (`mech-marketplace-gnosis`) for Omen mech tool matching
 - **IPFS accuracy store CSV** (`QmR8etyW3TPFadNtNrW54vfnFqmh8vBrMARWV76EmxCZyk`) — the pre-loaded tool accuracy data from `tools_accuracy_hash` in service.yaml
 - Trader codebase (`trader/packages/valory/skills/decision_maker_abci/policy.py`) for accuracy store logic
 - Trader codebase (`trader/packages/valory/skills/decision_maker_abci/behaviours/storage_manager.py`) for store initialization flow
