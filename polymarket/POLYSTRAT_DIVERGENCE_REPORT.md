@@ -1,6 +1,6 @@
 # PolyStrat Fleet Divergence Analysis Report
 
-**Date:** 2026-03-17
+**Date:** 2026-03-17 (updated 2026-03-18)
 **Subject:** Why identical PolyStrat agents show persistent performance divergence
 **Focus agent:** Thomas (`0x33d20338f1700eda034ea2543933f94a2177ae4c`)
 **Fleet size:** 98 registered agents, 91 with bets, 73 with 10+ resolved bets
@@ -11,16 +11,18 @@
 
 All PolyStrat agents run identical code, see the same markets, and share the same initial configuration. Despite this, some agents persistently outperform while others persistently underperform. Thomas' agent is -$81 (2nd worst in fleet) and has never had a single profitable week across 7 weeks.
 
-**Root cause:** The epsilon-greedy accuracy store locks agents into different mech tools within ~36 bets based on early random tool selections. The two dominant tools have dramatically different economics:
-1
+**Root cause:** The IPFS accuracy store (`QmR8etyW3TPFadNtNrW54vfnFqmh8vBrMARWV76EmxCZyk`) pre-loads `prediction-request-reasoning` as the highest-weighted tool from initialization. Agents are locked into PRR from **bet #1**, not bet #36 as previously reported. The lock-in is not caused by early random exploration — it is baked into the initial configuration.
+
 | Tool | Fleet Bets | Accuracy | Fleet PnL |
 |---|---|---|---|
 | `superforcaster` | 406 | 73.4% | **+$94** |
 | `prediction-request-reasoning` | 6,155 | 63.1% | **-$930** |
 
-63% accuracy is below breakeven at 71% of the price ranges PRR encounters. Agents locked into PRR bleed money. Agents locked into SF are more likely to stay profitable — though SF is not a silver bullet (4 out of 7 high-SF agents still lose money). The store never self-corrects because PRR's 63% isn't bad enough to get displaced, just bad enough to lose at the prices being paid.
+**Why PRR wins the initial store:** The IPFS CSV contains Omen-era accuracy data (April–June 2024). PRR has 67.1% accuracy and 17,372 requests (28% of all volume). The volume regularization term (`+0.1 * requests/total`) pushes PRR's weighted accuracy above `prediction-offline` (67.4% accuracy but only 7.2% volume share). `superforcaster` is **not in the CSV at all** — it gets added with 0 accuracy and 0 requests at startup. The 75% exploitation rate then selects PRR on 75% of all bets from the very first round, with SF only reachable via the 25% random exploration phase (~2.5% chance per bet given ~10 tools).
 
-The underlying issue is that PRR accuracy varies widely across agents (48% to 88%). Some agents with high PRR accuracy are profitable without SF. The tool lock-in explains the persistence mechanism, but PRR being too inaccurate at the prices being paid across most of the fleet is the fundamental problem.
+On-chain verification (30-agent sample) confirms this: **83% of agents use PRR on their literal first bet**, and PRR averages 77.6% of tool selections across all agents' first 10 bets — matching the expected 75% exploit + 2.5% explore rate almost exactly.
+
+63% accuracy is below breakeven at 71% of the price ranges PRR encounters. Agents locked into PRR bleed money. The store never self-corrects because PRR's 63% isn't bad enough to get displaced, just bad enough to lose at the prices being paid.
 
 **Secondary cause:** The price filter (0.80 threshold) allows deeply negative EV bets on both tails. Tightening to 0.70 would save ~$665 fleet-wide.
 
@@ -148,11 +150,12 @@ SF helps (43% profitable vs 15-20%) but is not a guarantee. Some zero-SF agents 
 
 ### 6. Deep Mechanism Analysis (`analyze_persistence_deep.py`)
 
-**H1: Accuracy Store Feedback Loop — CONFIRMED**
-- Store lock-in round: mean=64, median=36
-- Early luck (first 10 bets accuracy) vs final PnL: rho=0.282
-- Only 2/75 agents end up with PRR as best tool in their store
-- Top agents had 80-90% early accuracy, bottom agents had 50%
+**H1: Accuracy Store Feedback Loop — CONFIRMED but mechanism was wrong**
+- Original simulation (from empty store): lock-in round mean=64, median=36
+- **Corrected finding:** Lock-in is instant — the IPFS store pre-loads PRR as best_tool (see Section 8)
+- The "lock-in at 36 bets" was an artifact of simulating from an empty store, not what agents actually experience
+- Early luck (first 10 bets accuracy) vs final PnL: rho=0.282 — still valid, early wins/losses compound
+- Only 2/75 agents end up with PRR as best tool in their **simulated** store (doesn't reflect the real pre-loaded store)
 
 **H2: Kelly Dynamic Fraction Amplification — MINOR**
 - Dynamic fraction range: 1.516-1.519 (barely varies)
@@ -204,43 +207,91 @@ At high share prices, the win/loss asymmetry is brutal:
 - Bets above breakeven: 214 bets → +$131 PnL
 - Net: +$94
 
+### 8. IPFS Accuracy Store Verification (`verify_lockin.py`) — CORRECTS H1
+
+**The original H1 simulation was wrong.** `analyze_persistence_deep.py` initialized the accuracy store with `{requests: 0, accuracy: 0.0}` for each tool — a blank slate. In reality, agents start with a pre-loaded IPFS accuracy CSV.
+
+**Contents of IPFS accuracy store (`QmR8etyW3TPFadNtNrW54vfnFqmh8vBrMARWV76EmxCZyk`):**
+
+| Tool | Accuracy (%) | Requests | Volume Share | Weighted Acc (raw) |
+|---|---|---|---|---|
+| **prediction-request-reasoning** | 67.11 | **17,372** | **28.2%** | **0.6993 (#1)** |
+| prediction-online-sme | 65.67 | 14,642 | 23.7% | 0.6805 (#2) |
+| prediction-offline | **67.41** | 4,465 | 7.2% | 0.6813 (#3) |
+| prediction-online | 66.01 | 9,490 | 15.4% | 0.6755 (#4) |
+| prediction-request-rag-claude | 65.64 | 7,428 | 12.0% | 0.6684 |
+| prediction-request-reasoning-claude | 66.72 | 2,470 | 4.0% | 0.6712 |
+| prediction-request-rag | 63.58 | 2,691 | 4.4% | 0.6402 |
+| prediction-url-cot-claude | 61.90 | 1,596 | 2.6% | 0.6216 |
+| claude-prediction-online | 61.14 | 1,055 | 1.7% | 0.6131 |
+| claude-prediction-offline | 57.38 | 481 | 0.8% | 0.5746 |
+| **superforcaster** | **NOT PRESENT** | **0** | **0%** | **0.0000** |
+
+Note: `prediction-offline-sme` (70.49%, 61 requests) is in the CSV but filtered out by `irrelevant_tools`.
+
+**PRR is not the most accurate tool — `prediction-offline` is (67.41% vs 67.11%). PRR wins `best_tool` because the volume regularization bonus (`+0.1 * 17372/61690 = +0.028`) pushes it above `prediction-offline` (`+0.1 * 4465/61690 = +0.007`).** The IPFS data is from Omen-era trading (April–June 2024), so PRR's volume dominance reflects Omen history, not Polymarket performance.
+
+**On-chain verification (30 agents, `verify_lockin.py`):**
+
+| Metric | Value |
+|---|---|
+| Agents using PRR on first bet | **83%** (25/30) |
+| PRR rate in first 10 bets | **77.6%** (expected: 77.5% if PRR = best_tool) |
+| PRR rate in first 20 bets | **78.3%** |
+| PRR rate in first 50 bets | **79.2%** |
+| SF rate in first 10 bets | **26.7%** (only among 6 agents that used it) |
+| SF rate in first 50 bets | **9.4%** |
+| Median bet at which PRR >75% cumulative | **10** (not 36) |
+| Agents with PRR >= 60% in first 10 bets | **27/30** (90%) |
+| Mean unique tools in first 20 bets | **4.2** |
+
+**First bet tool distribution:**
+- `prediction-request-reasoning`: 83.3%
+- `prediction-online-sme`: 6.7%
+- `claude-prediction-online`: 6.7%
+- `prediction-request-rag`: 3.3%
+- `superforcaster`: 0%
+
+**Conclusion:** Lock-in is not a gradual process. It is instantaneous — determined by the IPFS accuracy store before a single bet is placed. The "~36 bet lock-in" from the earlier simulation was an artifact of starting from an empty store. The real question is not "when does lock-in happen" but "why does the IPFS store favor PRR." Answer: stale Omen-era volume counts in the regularization term.
+
 ---
 
-## The Persistence Mechanism (Full Chain)
+## The Persistence Mechanism (Full Chain) — REVISED
 
-1. **All agents start identical** — same code, same IPFS accuracy store, same markets
+1. **All agents start with PRR pre-loaded as `best_tool`** — the IPFS accuracy store CSV contains Omen-era data (April–June 2024) where PRR had the most requests (17,372). The volume regularization bonus makes PRR the highest-weighted tool before any Polymarket betting. Superforcaster is not in the CSV and starts at 0/0.
 
-2. **Seed divergence (bet #1-10):** Each agent processes at slightly different times → different drand beacon values → different random tool picks during the 25% exploration phase. ONE different pick is enough.
+2. **PRR is selected on 75-80% of bets from bet #1.** This is not gradual lock-in — it's the default state. On-chain data shows 83% of agents use PRR on their literal first bet. The epsilon-greedy policy selects `best_tool` (PRR) during the 75% exploitation phase and picks randomly among ~10 tools during the 25% exploration phase. This means PRR gets ~77.5% of all bets and SF gets ~2.5%.
 
-3. **Tool accuracy diverges predictions:** SF (73% accuracy, 4.9% longshot rate) gives different predictions than PRR (63%, 8.5% longshots) on the same market. Different tools literally recommend different sides.
+3. **SF rarely gets enough exposure to overtake PRR.** Even with 73.4% real accuracy vs PRR's 63.1%, SF starts at 0/0 in the store. At ~2.5% selection rate, an agent making 500 bets gives SF only ~12-13 bets. That's too few for SF's stored accuracy to reliably overtake PRR's pre-loaded 67.1% + volume bonus. The few agents with higher SF usage got lucky with early exploration picks that happened to land on SF.
 
-4. **Accuracy store locks in (by bet #36):** Whichever tool wins early gets a higher weighted_accuracy → exploitation (75% of rounds) picks it more → more data reinforces it → store locks.
+4. **PRR's 63% accuracy bleeds money at fleet prices.** PRR is below breakeven at 71% of the price ranges it encounters. The accuracy looks decent in isolation but is insufficient at the prices being paid. The store never self-corrects because PRR's accuracy isn't bad enough to trigger quarantine — just bad enough to lose at the odds offered.
 
-5. **PRR lock-in = persistent losses:** PRR is below breakeven at 71% of price ranges. The 63% accuracy looks decent but is insufficient at the prices being paid. The store never self-corrects because PRR's accuracy isn't bad enough to trigger displacement — just bad enough to bleed money.
+5. **SF lock-in ≠ guaranteed profits.** SF is above breakeven at most price ranges and is the only net-profitable tool fleet-wide (+$94). However, 4 out of 7 high-SF agents (>=10% usage) still lose money. Even high-SF agents still use PRR for the majority of their bets.
 
-6. **SF lock-in ≠ guaranteed profits:** SF is above breakeven at most price ranges and is the only net-profitable tool fleet-wide (+$94). However, 4 out of 7 high-SF agents (>=10% usage) are still losing money. SF helps but does not guarantee profitability — agents can still lose on their PRR bets (which still make up the majority even for high-SF agents).
+6. **The volume regularization term is the tipping mechanism.** By raw accuracy, `prediction-offline` (67.41%) beats PRR (67.11%). But the `0.1 * requests/total_requests` bonus gives PRR +0.028 vs prediction-offline's +0.007, making PRR the winner. This means the fleet's tool selection is determined by a stale volume count from 2024, not by which tool is actually most accurate.
 
-7. **PRR accuracy varies wildly across agents (48% to 88%).** Some agents with high PRR accuracy are profitable without SF (e.g., `0x433a5adb` has 88% PRR accuracy and is the most profitable agent at +$44 with only 4.5% SF usage). The tool lock-in explains the persistence mechanism, but the non-determinism of PRR predictions across agents is the deeper source of divergence.
-
-8. **Volume regularization reinforces the lock:** The `0.1 * requests/n_requests` bonus in weighted_accuracy gives the most-used tool a small extra advantage, making it even harder for less-used tools to overtake.
+7. **PRR accuracy varies wildly across agents (48% to 88%).** Some agents with high PRR accuracy are profitable without SF (e.g., `0x433a5adb` has 88% PRR accuracy and is the most profitable agent at +$44 with only 4.5% SF usage). The pre-loaded store explains why PRR dominates, but PRR's non-deterministic accuracy across agents determines which agents survive.
 
 ---
 
 ## Recommended Fixes (by estimated impact)
 
-### 1. Tighten price filter from 0.80 to 0.70 (~$665 savings)
+### 1. Update or remove the IPFS accuracy store (HIGHEST IMPACT — root cause fix)
+The IPFS CSV (`QmR8etyW3TPFadNtNrW54vfnFqmh8vBrMARWV76EmxCZyk`) contains stale Omen-era data from April–June 2024. It doesn't include superforcaster at all. Three options:
+- **Option A:** Update the CSV to include SF with its actual Polymarket accuracy (73.4%) and representative request counts. This immediately makes SF competitive in the weighted accuracy ranking.
+- **Option B:** Start agents with an empty store so all tools compete fairly during exploration. This means agents would explore randomly for the first period before the store has data.
+- **Option C:** Remove the volume regularization term (`0.1 * requests/total`). Without it, `prediction-offline` (67.41%) beats PRR (67.11%) by raw accuracy. This doesn't help SF directly but at least removes the stale-volume bias.
+
+### 2. Tighten price filter from 0.80 to 0.70 (~$665 savings)
 Both tails (below 0.30 and above 0.70) are deeply negative EV. The filter already works symmetrically — setting it to 0.70 cuts bets where one side is above 0.70 OR below 0.30. This eliminates the worst-performing price ranges with zero code complexity.
 
-### 2. Increase superforcaster usage (with caveats)
-SF is the only net-profitable tool fleet-wide (+$94 vs PRR's -$930), but it's not a silver bullet — 4/7 high-SF agents still lose money. Still worth increasing exposure:
-- Increase exploration rate (epsilon) temporarily to give all agents more SF exposure
-- Weight initial accuracy store to favor SF
-- Note: the real fix may be improving PRR's accuracy or calibration, since PRR dominates 78% of all bets regardless of store state
+### 3. Increase exploration rate temporarily
+The current epsilon of 0.25 gives each non-best tool ~2.5% selection rate. Temporarily increasing epsilon to 0.5 or higher would give SF more exposure to build a track record in the store. Once SF accumulates enough wins, it can overtake PRR organically. This is a band-aid, not a fix — the real solution is #1.
 
-### 3. Add minimum edge requirement
+### 4. Add minimum edge requirement
 Currently any expected profit > 0 triggers a bet. Adding a requirement like `predicted_probability > share_price + 0.05` would filter out low-conviction bets. Note: the 0.45-0.55 zone is actually profitable, so the edge threshold should be tuned carefully.
 
-### 4. Cap Kelly sizing more aggressively on extreme prices
+### 5. Cap Kelly sizing more aggressively on extreme prices
 The $2.50 max bet hits on longshot bets where the model is wrong 90% of the time. Scaling the max bet down for prices outside 0.40-0.60 would reduce the damage from miscalibrated predictions.
 
 ---
@@ -262,6 +313,9 @@ python polymarket/analyze_persistence.py
 # Deep mechanism analysis (accuracy store simulation, Kelly amplification, etc.)
 python polymarket/analyze_persistence_deep.py
 
+# IPFS accuracy store verification — checks on-chain tool usage vs pre-loaded store
+python polymarket/verify_lockin.py --sample 30
+
 # All support --json, --no-charts, --no-tools, --min-bets flags
 ```
 
@@ -272,6 +326,8 @@ python polymarket/analyze_persistence_deep.py
 - Polymarket bets subgraph (`predict-polymarket-agents.subgraph.autonolas.tech`)
 - Polygon registry subgraph (The Graph, agentId=86)
 - Polygon marketplace subgraph (`marketplace-polygon`) for mech tool matching
+- **IPFS accuracy store CSV** (`QmR8etyW3TPFadNtNrW54vfnFqmh8vBrMARWV76EmxCZyk`) — the pre-loaded tool accuracy data from `tools_accuracy_hash` in service.yaml
 - Trader codebase (`trader/packages/valory/skills/decision_maker_abci/policy.py`) for accuracy store logic
-- Trader service config (`trader/packages/valory/services/polymarket_trader/service.yaml`) for parameters
+- Trader codebase (`trader/packages/valory/skills/decision_maker_abci/behaviours/storage_manager.py`) for store initialization flow
+- Trader service config (`trader/packages/valory/services/polymarket_trader/service.yaml`) for parameters and `irrelevant_tools`
 - Mech-predict codebase (`mech-predict/packages/`) for tool implementation details
