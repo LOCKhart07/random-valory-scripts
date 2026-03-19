@@ -1,0 +1,27 @@
+{
+  "description": "PolyStrat agents owned by Valory team members. Use --exclude with analyze_tool_usage.py to filter these out.",
+  "agents": [
+    {"name": "Aleks", "address": "0x984974e8D173dcb08bDCEC4e2b3a506b90ee72B2"},
+    {"name": "Andrey", "address": "0x44ddf64e6e055eb28B076a12c93F3A2f66f288ac"},
+    {"name": "Andrey", "address": "0xE9A8db098E896a36496D64D7Aef04650f2dFb9Bd"},
+    {"name": "Benny", "address": "0x9AA566D1e9f14FE498E3CD2a3c4196E6eCD8dC6E"},
+    {"name": "Dhairya", "address": "0x48732C4Ed5540273b27a0C4494e3B13fD1CF2706"},
+    {"name": "Dima", "address": "0xf353d9E874E6d86EB9112b60D0d98b880aD0E2b5"},
+    {"name": "Dima", "address": "0x2B61eE6ed00fD40a7E179AF7BA63e78991e525A8"},
+    {"name": "Divya", "address": "0xD8da8f33e151E9Fb2D2Ed02BC806c4fABe248dFc"},
+    {"name": "Ellie", "address": "0x21CFdb1e8dEe44B4f38e273B9b5B7605043FFcFB"},
+    {"name": "Jenslee", "address": "0x9070A95134A06290141e94B6Dd453c9c88dc4BA4"},
+    {"name": "Jose", "address": "0xe72625771218AE5118efE21f683899F166bd976A"},
+    {"name": "Kim", "address": "0x375C956d564A43Ee07BFD3775a6Ec98CBaC71D70"},
+    {"name": "Mohan", "address": "0x7e0a4908c6636Cbcb54BF18513FE0135f5308B40"},
+    {"name": "Nadica", "address": "0xc8e7FA7d5f556B7510141c6Af870f98C1B95dfa4"},
+    {"name": "Ojuswi", "address": "0x28C51c6C3792502cC23722fBBc48034e1dFC97E6"},
+    {"name": "Pi", "address": "0x898268191554169F4bfC8ea2ecB5904ffC279a34"},
+    {"name": "Presh", "address": "0xD587030942069caB65c6C3E026bcdA4FDA87DA0a"},
+    {"name": "Rajat", "address": "0x0558c234a528BD03783989DC97A48951156f6d24"},
+    {"name": "Roman", "address": "0x1C7D7Dcf45d82050ADB2Ea79a8063538F41f1D42"},
+    {"name": "Tanya", "address": "0xe07760c37DC1392B174dA7d27d2d972591BD4114"},
+    {"name": "Thomas", "address": "0x33d20338f1700eDa034Ea2543933F94a2177Ae4C"},
+    {"name": "Victor", "address": "0xa9aB043187d5664a07c6cE6c69B68f34C3F8C307"}
+  ]
+}

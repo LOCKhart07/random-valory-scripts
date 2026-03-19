@@ -550,6 +550,14 @@ def main():
         help="End date (YYYY-MM-DD, default: now)",
     )
     parser.add_argument(
+        "--exclude", nargs="*", default=None,
+        help="Agent addresses to exclude (space-separated)",
+    )
+    parser.add_argument(
+        "--exclude-valory", action="store_true",
+        help="Exclude Valory team-owned agents (from data/valory_team_agents.json)",
+    )
+    parser.add_argument(
         "--json", dest="json_output", action="store_true",
         help="Output as JSON",
     )
@@ -570,6 +578,19 @@ def main():
     print("Fetching PolyStrat agent list...")
     agents = get_all_polystrat_agents()
     print(f"Found {len(agents)} agents")
+
+    exclude_set = set()
+    if args.exclude:
+        exclude_set.update(a.lower() for a in args.exclude)
+    if args.exclude_valory:
+        team_file = os.path.join(os.path.dirname(__file__), "data", "valory_team_agents.json")
+        with open(team_file) as f:
+            team_data = json.load(f)
+        exclude_set.update(a["address"].lower() for a in team_data["agents"])
+    if exclude_set:
+        before = len(agents)
+        agents = [a for a in agents if a not in exclude_set]
+        print(f"Excluded {before - len(agents)} agents, {len(agents)} remaining")
 
     print("Fetching mech requests across fleet...")
     records = collect_all_requests(
