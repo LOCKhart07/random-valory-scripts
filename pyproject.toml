@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "random-valory-scripts"
 version = "0.1.0"
-description = "Add your description here"
+description = "Utility scripts for analyzing the Autonolas/Olas ecosystem"
 authors = ["Jenslee Dsouza <jenslee.dsouza@valory.xyz>"]
 package-mode = false
 

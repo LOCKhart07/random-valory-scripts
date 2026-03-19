@@ -208,6 +208,11 @@ __marimo__/
 
 # Cache files
 .mech_cache*.json
-.mech_deliver_timeline_cache.json
-.mech_usage_timeline_cache.json
+.mech_cache*.json.bak*
+.mech_deliver_timeline_cache*.json
+.mech_usage_timeline_cache*.json
 .tool_accuracy_timeline_cache*.json
+
+# Generated output files
+tools_accuracy_*.csv
+tool_usage*.csv
