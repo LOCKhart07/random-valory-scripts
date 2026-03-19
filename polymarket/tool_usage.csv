@@ -1,0 +1,35 @@
+# Overall Tool Usage
+tool,requests,share_pct
+prediction-request-reasoning,12558,72.33
+superforcaster,1215,7.0
+prediction-request-reasoning-claude,558,3.21
+prediction-request-rag,419,2.41
+claude-prediction-offline,414,2.38
+openai-gpt-4o-2024-08-06,376,2.17
+prediction-request-rag-claude,374,2.15
+claude-prediction-online,361,2.08
+prediction-offline,359,2.07
+prediction-online,358,2.06
+prediction-online-sme,357,2.06
+prediction-offline-sme,14,0.08
+
+# Monthly Breakdown
+month,total,claude-prediction-offline,claude-prediction-online,openai-gpt-4o-2024-08-06,prediction-offline,prediction-offline-sme,prediction-online,prediction-online-sme,prediction-request-rag,prediction-request-rag-claude,prediction-request-reasoning,prediction-request-reasoning-claude,superforcaster
+2026-01,146,3,4,2,5,0,2,3,6,6,74,3,38
+2026-02,6990,165,149,161,146,14,161,150,155,146,5325,178,240
+2026-03,10227,246,208,213,208,0,195,204,258,222,7159,377,937
+
+# Tool Adoption
+tool,total_requests,unique_agents,first_seen,last_seen
+prediction-request-reasoning,12558,105,2026-01-21,2026-03-19
+superforcaster,1215,72,2026-01-20,2026-03-19
+prediction-request-reasoning-claude,558,72,2026-01-26,2026-03-19
+prediction-request-rag,419,71,2026-01-21,2026-03-19
+claude-prediction-offline,414,78,2026-01-26,2026-03-19
+openai-gpt-4o-2024-08-06,376,78,2026-01-22,2026-03-19
+prediction-request-rag-claude,374,78,2026-01-22,2026-03-19
+claude-prediction-online,361,71,2026-01-21,2026-03-19
+prediction-offline,359,70,2026-01-22,2026-03-19
+prediction-online,358,75,2026-01-22,2026-03-19
+prediction-online-sme,357,72,2026-01-22,2026-03-19
+prediction-offline-sme,14,1,2026-02-13,2026-02-25
