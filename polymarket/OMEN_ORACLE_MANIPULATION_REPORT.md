@@ -75,6 +75,42 @@ Several "Yes" resolutions are factually incorrect based on web searches:
 - **Not an Olas agent** — no traderAgent, no serviceId, no mech requests.
 - **Interacts directly** with FPMM contracts and Reality.io.
 
+## Why the Market Creator Didn't Defend
+
+The Olas market creator service creates markets and is supposed to resolve them via
+Reality.io. However, its code has two limitations that the attacker exploited:
+
+### 1. Subgraph Query Filters Out Already-Answered Markets
+
+In `get_pending_questions.py`, the query that finds markets to resolve uses:
+
+```
+currentAnswerBond: null
+```
+
+This means the market creator **only looks at markets with no answer yet**. Once the
+manipulator submits an answer (even with a 0.001 xDAI bond), the market creator's
+next cycle skips it entirely — it never sees the wrong answer.
+
+### 2. `MAX_PREVIOUS = 0` Blocks Re-Answering
+
+In `answer_questions.py`, the `submitAnswer` call uses `max_previous=0`, which causes
+the Reality.io contract to **revert if any answer already exists**. Even if the market
+creator somehow found an already-answered market, the transaction would fail.
+
+### Race Condition
+
+The manipulator submits answers at exactly **00:00 UTC** (when `openingTimestamp` passes).
+The market creator only picks up questions on its FSM cycle. By the time it queries the
+subgraph, `currentAnswerBond` is no longer null, and the market is invisible to it.
+
+### Bond Economics
+
+Both the market creator and the manipulator use **0.001 xDAI** bonds. In Reality.io,
+challenging requires posting ≥ 2x the current bond. At 0.001 xDAI the challenge cost
+is only 0.002 xDAI — trivially cheap — but nobody is monitoring to challenge because
+the market creator skips these markets entirely.
+
 ## Scripts
 
 Analysis scripts used for this investigation are in `polymarket/`:
