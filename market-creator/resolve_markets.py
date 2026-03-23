@@ -17,8 +17,8 @@ Env vars (in .env):
 
 Usage:
     python market-creator/resolve_markets.py --dry-run
-    python market-creator/resolve_markets.py --bond 10
-    python market-creator/resolve_markets.py --bond 0.01 --dry-run
+    python market-creator/resolve_markets.py --min-bond 10 --max-bond 50
+    python market-creator/resolve_markets.py --min-bond 0.01 --dry-run
 """
 
 import argparse
@@ -173,7 +173,7 @@ def parse_current_bond(market):
 
 
 async def get_mech_answer(service, title):
-    """Call the mech tool offchain to get the resolution answer."""
+    """Call the mech tool for a single market. Returns (answer_bytes, label)."""
     try:
         result = await service.send_request(
             prompts=(title,),
@@ -181,60 +181,47 @@ async def get_mech_answer(service, title):
             priority_mech=MECH_ADDRESS,
             use_offchain=False,
         )
-        return result
     except Exception as e:
         print(f"    Mech error: {e}")
-        return None
+        return None, "mech_error"
 
-
-def parse_mech_response(result):
-    """Parse mech response into an answer bytes32.
-
-    Returns (answer_bytes, label) or (None, reason).
-    Same logic as market creator's answer_questions.py lines 72-95.
-    """
     if result is None:
         return None, "mech_error"
 
-    # mech-client returns {delivery_results: {request_id: ipfs_url}, request_ids: [...]}
-    # Actual response is at {ipfs_url}/{request_id_as_integer}
-    response_data = None
-    if isinstance(result, dict):
-        delivery = result.get("delivery_results", {})
-        request_ids = result.get("request_ids", [])
-        if delivery and request_ids:
-            request_id_hex = request_ids[0]
-            request_id_int = str(int(request_id_hex, 16))
-            ipfs_url = delivery.get(request_id_hex, "")
-            if ipfs_url:
-                fetch_url = ipfs_url.rstrip("/") + "/" + request_id_int
-                try:
-                    r = http_requests.get(fetch_url, timeout=30)
-                    r.raise_for_status()
-                    envelope = r.json()
-                    # Response is double-encoded: {"result": "{\"is_determinable\": false}"}
-                    result_str = envelope.get("result", "")
-                    response_data = json.loads(result_str) if isinstance(result_str, str) else result_str
-                except Exception as e:
-                    print(f"    IPFS fetch error: {e}")
-                    return None, "ipfs_error"
+    delivery = result.get("delivery_results", {})
+    request_ids = result.get("request_ids", [])
+    if not delivery or not request_ids:
+        return None, "no_delivery"
 
-    if response_data is None:
-        return None, "no_response"
+    return _fetch_and_parse_mech_result(
+        delivery.get(request_ids[0], ""), request_ids[0]
+    )
+
+
+def _fetch_and_parse_mech_result(ipfs_url, request_id_hex):
+    """Fetch a single mech result from IPFS and parse it.
+
+    Returns (answer_bytes, label) or (None, reason).
+    """
+    request_id_int = str(int(request_id_hex, 16))
+    fetch_url = ipfs_url.rstrip("/") + "/" + request_id_int
 
     try:
-        if isinstance(response_data, str):
-            data = json.loads(response_data)
-        elif isinstance(response_data, dict):
-            data = response_data
-        else:
-            return None, "unparseable"
-    except json.JSONDecodeError:
-        return None, "json_error"
+        r = http_requests.get(fetch_url, timeout=30)
+        r.raise_for_status()
+        envelope = r.json()
+        result_str = envelope.get("result", "")
+        response_data = json.loads(result_str) if isinstance(result_str, str) else result_str
+    except Exception as e:
+        print(f"    IPFS fetch error: {e}")
+        return None, "ipfs_error"
 
-    is_valid = data.get("is_valid", True)
-    is_determinable = data.get("is_determinable", True)
-    has_occurred = data.get("has_occurred", None)
+    if not isinstance(response_data, dict):
+        return None, "unparseable"
+
+    is_valid = response_data.get("is_valid", True)
+    is_determinable = response_data.get("is_determinable", True)
+    has_occurred = response_data.get("has_occurred", None)
 
     if not is_valid:
         return ANSWER_INVALID, "Invalid"
@@ -332,8 +319,10 @@ async def async_main(args):
         print("Error: GNOSIS_RPC not set in .env")
         sys.exit(1)
 
-    bond_xdai = args.bond
-    bond_wei = int(bond_xdai * 10**18)
+    min_bond_xdai = args.min_bond
+    max_bond_xdai = args.max_bond
+    min_bond_wei = int(min_bond_xdai * 10**18)
+    max_bond_wei = int(max_bond_xdai * 10**18)
 
     # Connect web3
     w3 = Web3(Web3.HTTPProvider(rpc_url))
@@ -410,16 +399,43 @@ async def async_main(args):
         crypto=mech_crypto,
     )
 
-    # Process markets
+    # Prepare markets — filter out already-defended ones first
     submitted = 0
     skipped = 0
     disagreements = 0
     errors = 0
-    inconclusive = []  # markets where mech couldn't determine answer
+    inconclusive = []
 
     all_markets = answered + unanswered  # prioritize already-answered (more urgent)
 
-    for i, market in enumerate(all_markets):
+    # Pre-filter: skip markets where required bond would exceed max
+    markets_to_query = []
+    already_defended = []
+    for market in all_markets:
+        current_bond = parse_current_bond(market)
+        required_bond = max(min_bond_wei, current_bond * 2) if current_bond > 0 else min_bond_wei
+        if required_bond > max_bond_wei:
+            skipped += 1
+            already_defended.append(market)
+            continue
+        market["_required_bond"] = required_bond
+        markets_to_query.append(market)
+
+    if already_defended:
+        print(f"\n  Skipped ({len(already_defended)} markets, would require bond > {max_bond_xdai} xDAI):")
+        for m in already_defended:
+            q = m.get("question") or {}
+            title = q.get("title", "").split(SEP)[0].strip()
+            bond = parse_current_bond(m) / 10**18
+            answer = decode_answer(m.get("currentAnswer"))
+            print(f"    {answer} (bond: {bond:.4f})  {title}")
+
+    if not markets_to_query:
+        print("\n  All markets already defended or would exceed max bond — nothing to do.")
+        return
+
+    # Process markets one at a time
+    for i, market in enumerate(markets_to_query):
         q = market.get("question") or {}
         title = q.get("title", "").split(SEP)[0].strip()
         question_id = q.get("id", "")
@@ -428,29 +444,21 @@ async def async_main(args):
         label = market.get("_creator_label", "?")
         is_answered = current_bond > 0
 
-        print(f"\n[{i+1}/{len(all_markets)}] ({label}) {title}")
+        print(f"\n[{i+1}/{len(markets_to_query)}] ({label}) {title}")
 
         if is_answered:
             current_label = decode_answer(current_answer_hex)
-            print(
-                f"  On-chain: {current_label} (bond: {current_bond / 10**18:.4f} xDAI)"
-            )
-
-            # Check if bond is already >= our bond (someone else defended)
-            if current_bond >= bond_wei:
-                print(f"  Bond already >= {bond_xdai} xDAI — skipping")
-                skipped += 1
-                continue
+            print(f"  On-chain: {current_label} (bond: {current_bond / 10**18:.4f} xDAI)")
         else:
             print(f"  On-chain: NO ANSWER")
 
         # Get mech answer
         print(f"  Calling mech ({MECH_TOOL})...")
-        result = await get_mech_answer(mech_service, title)
-        mech_answer, mech_label = parse_mech_response(result)
+        mech_answer, mech_label = await get_mech_answer(mech_service, title)
+        print(f"  Mech: {mech_label}")
 
         if mech_answer is None:
-            print(f"  Mech: {mech_label} — flagged for manual review")
+            print(f"  Flagged for manual review")
             inconclusive.append({
                 "title": title,
                 "question_id": question_id,
@@ -460,8 +468,6 @@ async def async_main(args):
                 "reason": mech_label,
             })
             continue
-
-        print(f"  Mech: {mech_label}")
 
         # Compare
         if is_answered:
@@ -474,24 +480,19 @@ async def async_main(args):
                 skipped += 1
                 continue
             else:
-                print(
-                    f"  DISAGREE — on-chain={decode_answer(current_answer_hex)}, mech={mech_label}"
-                )
+                print(f"  DISAGREE — on-chain={decode_answer(current_answer_hex)}, mech={mech_label}")
                 disagreements += 1
 
         # Prompt
+        required_bond = market["_required_bond"]
+        required_bond_xdai = required_bond / 10**18
+
         if args.dry_run:
-            print(f"  [DRY RUN] Would submit: {mech_label} with {bond_xdai} xDAI bond")
+            print(f"  [DRY RUN] Would submit: {mech_label} with {required_bond_xdai:.4f} xDAI bond")
             continue
 
         if not args.auto:
-            choice = (
-                input(
-                    f"  Submit {mech_label} with {bond_xdai} xDAI bond? [y/n/q(uit)] "
-                )
-                .strip()
-                .lower()
-            )
+            choice = input(f"  Submit {mech_label} with {required_bond_xdai:.4f} xDAI bond? [y/n/q(uit)] ").strip().lower()
             if choice == "q":
                 print("Quitting.")
                 break
@@ -502,7 +503,7 @@ async def async_main(args):
         # Submit
         submitted, errors = _submit_and_confirm(
             w3, bond_crypto, question_id, mech_answer, current_bond,
-            bond_wei, submitted, errors,
+            required_bond, submitted, errors,
         )
 
     # ---- Manual review for inconclusive markets ----
@@ -541,10 +542,12 @@ async def async_main(args):
                 continue
 
             label_map = {"y": "Yes", "n": "No", "i": "Invalid"}
-            print(f"    Submitting: {label_map[choice]} with {bond_xdai} xDAI bond")
+            cur_bond = m["current_bond"]
+            required_bond = max(min_bond_wei, cur_bond * 2) if cur_bond > 0 else min_bond_wei
+            print(f"    Submitting: {label_map[choice]} with {required_bond / 10**18:.4f} xDAI bond")
             submitted, errors = _submit_and_confirm(
-                w3, bond_crypto, m["question_id"], answer_bytes, m["current_bond"],
-                bond_wei, submitted, errors,
+                w3, bond_crypto, m["question_id"], answer_bytes, cur_bond,
+                required_bond, submitted, errors,
             )
 
     # Summary
@@ -562,7 +565,10 @@ async def async_main(args):
 def main():
     parser = argparse.ArgumentParser(description="Interactive Omen market resolution")
     parser.add_argument(
-        "--bond", type=float, default=10.0, help="Bond amount in xDAI (default: 10)"
+        "--min-bond", type=float, default=10.0, help="Minimum bond in xDAI for unanswered markets (default: 10)"
+    )
+    parser.add_argument(
+        "--max-bond", type=float, default=50.0, help="Max bond in xDAI — skip markets above this (default: 50)"
     )
     parser.add_argument(
         "--device", type=int, default=0, help="Ledger device index (default: 0)"
