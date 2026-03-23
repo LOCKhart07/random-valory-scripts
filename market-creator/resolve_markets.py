@@ -357,21 +357,34 @@ async def async_main(args):
         os.unlink(mech_key_path)
     print(f"Mech key: {mech_crypto.address}")
 
-    # Connect Ledger (skip in dry-run)
+    # Connect bond signer — Ledger HWI or fallback to private key from env
     bond_crypto = None
     if not args.dry_run:
-        from aea_ledger_ethereum_hwi import EthereumHWICrypto
+        bond_key = os.getenv("BOND_PRIVATE_KEY", "")
+        if bond_key:
+            # Use private key for bond signing (testing / no hardware wallet)
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+                f.write(bond_key)
+                bond_key_path = f.name
+            try:
+                bond_crypto = EthereumCrypto(bond_key_path)
+            finally:
+                os.unlink(bond_key_path)
+            print(f"Bond signer (key): {bond_crypto.address}")
+        else:
+            # Use Ledger hardware wallet
+            from aea_ledger_ethereum_hwi import EthereumHWICrypto
 
-        bond_crypto = EthereumHWICrypto(
-            default_device_index=args.device,
-            default_account_index=args.account,
-            default_keypair_index=0,
-        )
+            bond_crypto = EthereumHWICrypto(
+                default_device_index=args.device,
+                default_account_index=args.account,
+                default_keypair_index=0,
+            )
+            print(f"Bond signer (Ledger): {bond_crypto.address}")
         balance = w3.eth.get_balance(Web3.to_checksum_address(bond_crypto.address))
-        print(f"Ledger address: {bond_crypto.address}")
-        print(f"Ledger balance: {balance / 10**18:.4f} xDAI")
+        print(f"Bond balance: {balance / 10**18:.4f} xDAI")
     else:
-        print("DRY RUN — no Ledger needed, no transactions will be sent")
+        print("DRY RUN — no transactions will be sent")
 
     # Fetch markets
     print(f"\nFetching unfinalized markets...")
@@ -415,7 +428,7 @@ async def async_main(args):
         label = market.get("_creator_label", "?")
         is_answered = current_bond > 0
 
-        print(f"\n[{i+1}/{len(all_markets)}] ({label}) {title[:80]}")
+        print(f"\n[{i+1}/{len(all_markets)}] ({label}) {title}")
 
         if is_answered:
             current_label = decode_answer(current_answer_hex)
@@ -501,7 +514,7 @@ async def async_main(args):
 
         for j, m in enumerate(inconclusive):
             on_chain = f"{m['current_answer']} (bond: {m['current_bond']/10**18:.4f})" if m["current_answer"] else "NO ANSWER"
-            print(f"\n  [{j+1}/{len(inconclusive)}] ({m['label']}) {m['title'][:80]}")
+            print(f"\n  [{j+1}/{len(inconclusive)}] ({m['label']}) {m['title']}")
             print(f"    On-chain: {on_chain}")
             print(f"    Mech reason: {m['reason']}")
 
