@@ -90,61 +90,71 @@ def fetch_unfinalized_markets(api_key):
     now = int(time.time())
     all_markets = []
 
-    for creator in CREATORS:
-        label = CREATOR_LABELS[creator]
-        skip = 0
-        while True:
-            query = f"""
-            {{
-              fixedProductMarketMakers(
-                where: {{
-                  creator: "{creator}"
-                  openingTimestamp_lt: {now}
-                  answerFinalizedTimestamp: null
-                }}
-                first: 1000
-                skip: {skip}
-                orderBy: openingTimestamp
-                orderDirection: asc
-              ) {{
+    FIELDS = """
                 id
-                question {{
+                question {
                   id
                   title
                   outcomes
                   currentAnswer
                   currentAnswerBond
-                }}
+                }
                 openingTimestamp
                 currentAnswer
                 currentAnswerBond
+                answerFinalizedTimestamp
                 timeout
                 collateralVolume
-              }}
-            }}
-            """
-            r = http_requests.post(
-                url,
-                json={"query": query},
-                headers={"Content-Type": "application/json"},
-                timeout=90,
-            )
-            r.raise_for_status()
-            data = r.json()
-            if "errors" in data:
-                print(f"  Subgraph error: {data['errors']}")
-                break
-            markets = data.get("data", {}).get("fixedProductMarketMakers", [])
-            for m in markets:
-                m["_creator_label"] = label
-            all_markets.extend(markets)
-            if len(markets) < 1000:
-                break
-            skip += 1000
+    """
 
-        print(
-            f"  {label}: {len([m for m in all_markets if m['_creator_label'] == label])} unfinalized markets"
-        )
+    # Two queries per creator:
+    #   1. Unanswered (answerFinalizedTimestamp is null, opening passed)
+    #   2. Answered but still contestable (answerFinalizedTimestamp in the future)
+    filters = [
+        ("unanswered", f'creator: "{{creator}}", openingTimestamp_lt: {now}, answerFinalizedTimestamp: null'),
+        ("contestable", f'creator: "{{creator}}", openingTimestamp_lt: {now}, answerFinalizedTimestamp_gt: {now}'),
+    ]
+
+    for creator in CREATORS:
+        label = CREATOR_LABELS[creator]
+        creator_count = 0
+        for filter_name, where_tpl in filters:
+            where = where_tpl.format(creator=creator)
+            skip = 0
+            while True:
+                query = f"""
+                {{
+                  fixedProductMarketMakers(
+                    where: {{ {where} }}
+                    first: 1000
+                    skip: {skip}
+                    orderBy: openingTimestamp
+                    orderDirection: asc
+                  ) {{ {FIELDS} }}
+                }}
+                """
+                r = http_requests.post(
+                    url,
+                    json={"query": query},
+                    headers={"Content-Type": "application/json"},
+                    timeout=90,
+                )
+                r.raise_for_status()
+                data = r.json()
+                if "errors" in data:
+                    print(f"  Subgraph error: {data['errors']}")
+                    break
+                markets = data.get("data", {}).get("fixedProductMarketMakers", [])
+                for m in markets:
+                    m["_creator_label"] = label
+                    m["_filter"] = filter_name
+                all_markets.extend(markets)
+                creator_count += len(markets)
+                if len(markets) < 1000:
+                    break
+                skip += 1000
+
+        print(f"  {label}: {creator_count} markets ({sum(1 for m in all_markets if m['_creator_label'] == label and m['_filter'] == 'unanswered')} unanswered, {sum(1 for m in all_markets if m['_creator_label'] == label and m['_filter'] == 'contestable')} contestable)")
 
     return all_markets
 

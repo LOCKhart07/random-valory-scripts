@@ -25,12 +25,26 @@ the outcomes it resolves. This caused a fleet-wide accuracy collapse in week 11
 The address also places normal bets on markets it doesn't resolve (149 of 200 markets),
 which mostly lose. The profit comes from the ~51 markets where it both bets and resolves.
 
+## Targeted Creators
+
+Cross-referencing the attacker's 54 Reality.io submissions against Omen FPMM markets:
+
+| Creator | Markets | Final | Sole Responder | Yes | No | Volume (xDAI) |
+|---------|---------|-------|----------------|-----|----|---------------|
+| **Pearl** | 36 | 36 | 36 | 29 | 7 | 934.45 |
+| **QS** | 14 | 14 | 11 | 8 | 6 | 184.44 |
+
+- **Both creators are targeted**, but Pearl is the primary target (72% of attacks, 84% of volume).
+- All 50 matched markets had their attacker answer become final (100%).
+- Attacks started March 15 on Pearl, expanded to QS on March 16.
+- Ramped up from 1/day to 10–13/day by March 21–23.
+
 ## Evidence
 
 ### Reality.io Activity
-- **54 answer submissions**, 39 answered "Yes", 15 answered "No".
-- **51 became final** (94.4% win rate), 3 were challenged and overturned.
-- **Sole responder** on 45/48 unique markets — no one contested.
+- **54 answer submissions**, 37 answered "Yes", 13 answered "No".
+- **50 became final** (100% on matched markets), 3 challenged and overturned on earliest attempts.
+- **Sole responder** on 47/50 markets — no one contested.
 - Total bond posted: **0.066 xDAI** (0.001 per answer).
 - All submissions at **00:00–00:02 UTC**.
 
