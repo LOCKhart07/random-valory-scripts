@@ -41,6 +41,7 @@ Flake8 is configured (`.flake8`) with E501 (line length) ignored.
 - `mech/` — mech request/deliver event queries, IPFS checks, usage/deliver timelines (Gnosis + Base chains)
 - `tool-accuracy/` — tool accuracy statistics, bar charts, timelines, and CSV generation for both Omen and Polymarket
 - `polymarket/` — PolyStrat agent analysis: single-agent diagnostics, fleet profitability, divergence analysis, tool usage trends, persistence testing, accuracy CSV generation, and a FastAPI server. Also contains Jupyter notebooks for Safe management and Polymarket operations
+- `omen/` — Omen fleet analysis, oracle manipulation investigation, single-agent diagnostics, price range profitability, and week-over-week comparison scripts for predict-omen agents on Gnosis Chain
 - `market-creator/` — Reality.io market event watcher on Gnosis Chain
 - `chatui/` — HTTP latency tester for configure_strategies endpoint
 

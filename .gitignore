@@ -219,3 +219,7 @@ __marimo__/
 # Generated output files
 tools_accuracy_*.csv
 tool_usage*.csv
+mech_deliveries.json
+mech_batch_test_result.json
+mech_result_debug.json
+unfinalized_markets.json
