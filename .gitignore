@@ -215,6 +215,7 @@ __marimo__/
 .mech_deliver_timeline_cache*.json
 .mech_usage_timeline_cache*.json
 .tool_accuracy_timeline_cache*.json
+.superforcaster_trend_cache*.json
 
 # Generated output files
 tools_accuracy_*.csv
