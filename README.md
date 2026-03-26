@@ -37,6 +37,16 @@ All scripts are standalone: `poetry run python <path/to/script>.py`. Most accept
 
 See each directory's README for detailed script descriptions.
 
+## Reports
+
+| Report | Description |
+|--------|-------------|
+| [`tool-accuracy/FULL_TOOL_ANALYSIS_REPORT.md`](tool-accuracy/FULL_TOOL_ANALYSIS_REPORT.md) | Full tool accuracy analysis across OmenStrat & PolyStrat — CIs, cross-platform comparison, anti-predictive tools, recommendations |
+| [`tool-accuracy/SUPERFORCASTER_ACCURACY_REPORT.md`](tool-accuracy/SUPERFORCASTER_ACCURACY_REPORT.md) | Superforcaster accuracy trend investigation — is it degrading or converging? (statistical significance tests) |
+| [`polymarket/POLYSTRAT_DIVERGENCE_REPORT.md`](polymarket/POLYSTRAT_DIVERGENCE_REPORT.md) | PolyStrat fleet divergence analysis — why agents perform differently |
+| [`omen/OMEN_ORACLE_MANIPULATION_REPORT.md`](omen/OMEN_ORACLE_MANIPULATION_REPORT.md) | Omen oracle manipulation investigation — market creator vulnerability |
+| [`mech/MECH_IPFS_ABUSE_REPORT.md`](mech/MECH_IPFS_ABUSE_REPORT.md) | Mech IPFS abuse report — deliver gateway issues |
+
 ## Data Sources
 
 - **Subgraphs**: Autonolas subgraph proxies (`api.subgraph.autonolas.tech`) for mech-marketplace (Gnosis + Polygon) and predict-omen/predict-polymarket
