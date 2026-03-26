@@ -14,6 +14,8 @@ Per-tool accuracy analysis, visualizations, and CSV generation for both Omen and
 | `generate_accuracy_csv.py` | Generate accuracy CSV from on-chain Omen data |
 | `superforcaster_trend.py` | Superforcaster cumulative/rolling accuracy trend on Polymarket |
 | `accuracy_significance.py` | Statistical significance tests for all tool accuracy trends |
+| `full_tool_analysis.py` | Comprehensive per-tool analysis using cached on-chain Polymarket data |
+| `full_tool_analysis_report.py` | Cross-platform report generator using production accuracy endpoint |
 
 ## Usage
 
@@ -34,4 +36,10 @@ poetry run python tool-accuracy/superforcaster_trend.py --days 30    # last 30 d
 
 # Statistical significance tests
 poetry run python tool-accuracy/accuracy_significance.py
+
+# Full tool analysis (on-chain data)
+poetry run python tool-accuracy/full_tool_analysis.py
+
+# Generate cross-platform report (production endpoint)
+poetry run python tool-accuracy/full_tool_analysis_report.py
 ```
