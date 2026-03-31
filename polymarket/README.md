@@ -20,6 +20,8 @@ Analysis scripts for Polymarket PolyStrat prediction agents (agent ID 86) on Pol
 | `get_polymarket_agents_accuracy_and_roi.py` | Fetch all agents, generate profitability report |
 | `verify_lockin.py` | Verify accuracy store lock-in behavior |
 | `verify_tool_pnl_claims.py` | Verify tool PnL claims against on-chain data |
+| `analyze_daily_activity.py` | Per-day betting activity metrics — bet counts, sizing, active agents |
+| `analyze_poly_week_compare.py` | Before/after comparison of fleet metrics around a deploy or change date |
 | `server.py` | FastAPI server for agent analysis (HMAC-authenticated) |
 
 The directory also contains Jupyter notebooks for Safe management, Polymarket operations, and redemption workflows.

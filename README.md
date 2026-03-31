@@ -46,6 +46,7 @@ See each directory's README for detailed script descriptions.
 | [`polymarket/POLYSTRAT_DIVERGENCE_REPORT.md`](polymarket/POLYSTRAT_DIVERGENCE_REPORT.md) | PolyStrat fleet divergence analysis — why agents perform differently |
 | [`omen/OMEN_ORACLE_MANIPULATION_REPORT.md`](omen/OMEN_ORACLE_MANIPULATION_REPORT.md) | Omen oracle manipulation investigation — market creator vulnerability |
 | [`mech/MECH_IPFS_ABUSE_REPORT.md`](mech/MECH_IPFS_ABUSE_REPORT.md) | Mech IPFS abuse report — deliver gateway issues |
+| [`mech/source_content_impact_report.md`](mech/source_content_impact_report.md) | source_content IPFS overhead — daily request volumes and storage projections across Gnosis + Polygon |
 
 ## Data Sources
 

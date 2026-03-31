@@ -19,11 +19,19 @@ Scripts for querying mech request/deliver events on Gnosis and Base chains.
 | `find_requests_for_a_mech.py` | Fetch request events from Base contract with date filters |
 | `mech_deliver_timeline.py` | Plot per-mech deliver trends over 30-90 days |
 | `mech_usage_timeline.py` | Plot per-mech request trends over time |
+| `count_daily_requests_by_tool.py` | Count daily mech requests by tool across Gnosis and Polygon |
 | `test_tools_with_resource_util.py` | Test tools with resource utilization metrics |
 
 ## Data Sources
 
 - **Gnosis mech marketplace**: `api.subgraph.autonolas.tech/api/proxy/marketplace-gnosis`
+- **Polygon mech marketplace**: `api.subgraph.autonolas.tech/api/proxy/marketplace-polygon`
 - **Base mech marketplace**: `api.subgraph.autonolas.tech/api/proxy/marketplace-base`
 - **IPFS**: `gateway.autonolas.tech` for request/delivery metadata
 - **RPC**: Direct event log queries for Deliver events
+
+## Reports
+
+| Report | Description |
+|--------|-------------|
+| [`source_content_impact_report.md`](source_content_impact_report.md) | source_content IPFS overhead impact analysis — daily request volumes, storage projections |
