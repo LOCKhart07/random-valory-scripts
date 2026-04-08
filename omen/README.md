@@ -14,6 +14,7 @@ See [OMEN_ORACLE_MANIPULATION_REPORT.md](OMEN_ORACLE_MANIPULATION_REPORT.md) for
 | `analyze_omen_week_compare.py` | Before/after period comparison — identifies what changed (tools, sizing, outcome side) |
 | `analyze_omen_large_bets.py` | Large vs small bet accuracy divergence analysis |
 | `analyze_resolver.py` | Deep analysis of suspected oracle manipulator — funding, on-chain bets, Reality.io submissions, cross-reference |
+| `omen_yes_no_ratio.py` | Yes vs No ratio analysis — market resolutions, bet placement, and xDAI volume by outcome side |
 
 ## Usage
 
