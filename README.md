@@ -33,6 +33,7 @@ All scripts are standalone: `poetry run python <path/to/script>.py`. Most accept
 | [`omen/`](omen/) | Omen fleet analysis — agent diagnostics, fleet trends, oracle manipulation investigation |
 | [`tool-accuracy/`](tool-accuracy/) | Tool accuracy statistics, bar charts, timelines, CSV generation |
 | [`market-creator/`](market-creator/) | Reality.io market event watcher on Gnosis Chain |
+| [`staking/`](staking/) | Olas staking subgraph lookups — find staking contract by service multisig |
 | `chatui/` | HTTP latency tester for configure_strategies endpoint |
 
 See each directory's README for detailed script descriptions.

@@ -43,6 +43,7 @@ Flake8 is configured (`.flake8`) with E501 (line length) ignored.
 - `polymarket/` — PolyStrat agent analysis: single-agent diagnostics, fleet profitability, divergence analysis, tool usage trends, persistence testing, accuracy CSV generation, and a FastAPI server. Also contains Jupyter notebooks for Safe management and Polymarket operations
 - `omen/` — Omen fleet analysis, oracle manipulation investigation, single-agent diagnostics, price range profitability, and week-over-week comparison scripts for predict-omen agents on Gnosis Chain
 - `market-creator/` — Reality.io market event watcher on Gnosis Chain
+- `staking/` — Olas staking subgraph lookups (Gnosis): find which staking contract a service multisig is on
 - `chatui/` — HTTP latency tester for configure_strategies endpoint
 
 ## Key Subgraph Endpoints
@@ -51,6 +52,7 @@ Flake8 is configured (`.flake8`) with E501 (line length) ignored.
 - **Mech marketplace (Polygon)**: `api.subgraph.autonolas.tech/api/proxy/marketplace-polygon`
 - **Mech marketplace (Gnosis)**: `api.subgraph.autonolas.tech/api/proxy/marketplace-gnosis`
 - **Predict Omen**: `api.subgraph.staging.autonolas.tech/api/proxy/predict-omen`
+- **Olas staking (Gnosis)**: `staking-gnosis.subgraph.autonolas.tech` — `serviceStakeds`, `service`, `stakingContract` entities
 - **Polygon registry**: via The Graph gateway (agent ID 86 = PolyStrat)
 
 ## Conventions
