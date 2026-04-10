@@ -23,6 +23,7 @@ Analysis scripts for Polymarket PolyStrat prediction agents (agent ID 86) on Pol
 | `analyze_daily_activity.py` | Per-day betting activity metrics — bet counts, sizing, active agents |
 | `analyze_poly_week_compare.py` | Before/after comparison of fleet metrics around a deploy or change date |
 | `polymarket_yes_no_ratio.py` | Yes vs No ratio analysis — market resolutions, bet placement, and USDC volume by outcome side |
+| `verify_zd852_no_mech_calls.py` | ZD#852 — verify on-chain mech requests, deliveries, and Polymarket bets for a single Safe (used for "agent isn't trading" investigations) |
 | `server.py` | FastAPI server for agent analysis (HMAC-authenticated) |
 
 The directory also contains Jupyter notebooks for Safe management, Polymarket operations, and redemption workflows.
