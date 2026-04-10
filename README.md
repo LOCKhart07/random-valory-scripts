@@ -46,6 +46,7 @@ See each directory's README for detailed script descriptions.
 | [`tool-accuracy/SUPERFORCASTER_ACCURACY_REPORT.md`](tool-accuracy/SUPERFORCASTER_ACCURACY_REPORT.md) | Superforcaster accuracy trend investigation — is it degrading or converging? (statistical significance tests) |
 | [`polymarket/POLYSTRAT_DIVERGENCE_REPORT.md`](polymarket/POLYSTRAT_DIVERGENCE_REPORT.md) | PolyStrat fleet divergence analysis — why agents perform differently |
 | [`omen/OMEN_ORACLE_MANIPULATION_REPORT.md`](omen/OMEN_ORACLE_MANIPULATION_REPORT.md) | Omen oracle manipulation investigation — market creator vulnerability |
+| [`omen/ZD919_INVALID_MARKETS_REPORT.md`](omen/ZD919_INVALID_MARKETS_REPORT.md) | ZD#919 — on-chain proof that 7 "invalid" Omen markets are pending Reality.eth finalization, not invalid |
 | [`mech/MECH_IPFS_ABUSE_REPORT.md`](mech/MECH_IPFS_ABUSE_REPORT.md) | Mech IPFS abuse report — deliver gateway issues |
 | [`mech/source_content_impact_report.md`](mech/source_content_impact_report.md) | source_content IPFS overhead — daily request volumes and storage projections across Gnosis + Polygon |
 

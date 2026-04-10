@@ -15,6 +15,9 @@ See [OMEN_ORACLE_MANIPULATION_REPORT.md](OMEN_ORACLE_MANIPULATION_REPORT.md) for
 | `analyze_omen_large_bets.py` | Large vs small bet accuracy divergence analysis |
 | `analyze_resolver.py` | Deep analysis of suspected oracle manipulator — funding, on-chain bets, Reality.io submissions, cross-reference |
 | `omen_yes_no_ratio.py` | Yes vs No ratio analysis — market resolutions, bet placement, and xDAI volume by outcome side |
+| `verify_invalid_markets_zd919.py` | ZD#919 — verify on-chain status of 7 "invalid" markets: FPMM/CT/Reality.eth state, redeemable XDAI, sibling redemptions |
+| `verify_unredeemed_markets_zd899.py` | ZD#899 — follow-up verify of 6 "Traded but unredeemed" markets: Reality.eth finalization, CT balances, redeem amounts |
+| `verify_smr_market_kim.py` | One-off verify of the SMR market reported by Kim — Reality.eth finalization vs Pearl UI status |
 
 ## Usage
 
@@ -38,3 +41,11 @@ poetry run python omen/analyze_resolver.py 0xc5fd24b2974743896e1e94c47e99d3960c7
 - **Gnosis mech marketplace**: `api.subgraph.autonolas.tech/api/proxy/marketplace-gnosis` — mech requests, tool matching
 - **Reality.io subgraph** (The Graph, ID `E7ymrCnNcQdAAgLbdFWzGE5mvr5Mb5T9VfT43FqA7bNh`): answer submissions, question responses
 - **Gnosis RPC**: on-chain wxDAI transfers, conditional token redemptions
+
+## Reports
+
+| Report | Description |
+|--------|-------------|
+| [`OMEN_ORACLE_MANIPULATION_REPORT.md`](OMEN_ORACLE_MANIPULATION_REPORT.md) | March 2026 oracle manipulation investigation — market creator vulnerability and resolver behaviour |
+| [`ZD919_INVALID_MARKETS_REPORT.md`](ZD919_INVALID_MARKETS_REPORT.md) | ZD#919 — on-chain proof that the 7 "invalid" markets are pending Reality.eth finalization, not invalid; redeem path is clean |
+| [`ZD919_TRADER_INVESTIGATION_BRIEF.md`](ZD919_TRADER_INVESTIGATION_BRIEF.md) | Brief for the follow-up agent working in `valory-xyz/trader` to fix the "invalid" mislabel in the Pearl UI / agent |
