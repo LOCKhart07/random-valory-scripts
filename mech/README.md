@@ -20,6 +20,7 @@ Scripts for querying mech request/deliver events on Gnosis and Base chains.
 | `mech_deliver_timeline.py` | Plot per-mech deliver trends over 30-90 days |
 | `mech_usage_timeline.py` | Plot per-mech request trends over time |
 | `count_daily_requests_by_tool.py` | Count daily mech requests by tool across Gnosis and Polygon |
+| `analyze_pyes_trends.py` | Compare mech tool prediction outputs (p_yes/p_no/confidence) before vs after a split date for PolyStrat (Polygon) and OmenStrat (Gnosis) |
 | `test_tools_with_resource_util.py` | Test tools with resource utilization metrics |
 
 ## Data Sources
