@@ -24,6 +24,9 @@ Analysis scripts for Polymarket PolyStrat prediction agents (agent ID 86) on Pol
 | `analyze_poly_week_compare.py` | Before/after comparison of fleet metrics around a deploy or change date |
 | `polymarket_yes_no_ratio.py` | Yes vs No ratio analysis — market resolutions, bet placement, and USDC volume by outcome side |
 | `verify_zd852_no_mech_calls.py` | ZD#852 — verify on-chain mech requests, deliveries, and Polymarket bets for a single Safe (used for "agent isn't trading" investigations) |
+| `investigate_zd_service227.py` | ZD service 227 (polygon_beta_1) — on-chain forensics for a Safe that placed zero bets: Polygonscan tx lists, mech requests, CTF-exchange allowances, staking KPI reads |
+| `investigate_zd_service227_deliveries.py` | ZD service 227 follow-up — enumerate the 17 mech requests, verify delivery status, and spot-check delivered IPFS payload well-formedness |
+| `cross_reference_min_edge_service227.py` | ZD service 227 follow-up — cross-reference mech `p_yes` vs Polymarket CLOB best-ask at delivery time to confirm/rule out the `min_edge=0.03` Gate D hypothesis |
 | `server.py` | FastAPI server for agent analysis (HMAC-authenticated) |
 
 The directory also contains Jupyter notebooks for Safe management, Polymarket operations, and redemption workflows.
