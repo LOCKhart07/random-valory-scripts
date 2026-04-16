@@ -7,6 +7,7 @@ Scripts that query the Olas staking subgraph on Gnosis Chain.
 | Script | Description |
 |--------|-------------|
 | `find_staking_contract.py` | Given a Safe / service multisig address, find its service ID, the staking contract it's currently staked on, and resolve the contract's IPFS metadata to a human name |
+| `investigate_predict_860.py` | PREDICT-860 — onchain investigation for a Pearl Trader Safe burning xDAI/wxDAI without meeting staking KPI: classifies outflows (bets vs mech fees vs other) and counts mech requests per epoch against the activity-checker liveness ratio |
 
 ## Usage
 
