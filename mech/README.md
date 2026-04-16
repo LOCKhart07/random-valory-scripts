@@ -26,6 +26,8 @@ Scripts for querying mech request/deliver events on Gnosis and Base chains.
 | `olas_trader_effective_tools.py` | Compute the effective usable tool set for each Olas Trader template (Gnosis + Polygon) by diffing per-chain marketplace tools against IRRELEVANT_TOOLS parsed from olas-operate-app's trader.ts |
 | `tool_response_trend.py` | Classify mech deliver responses over time (structured / facts-leak / json-other / non-json / empty) and summarise p_yes/p_no/confidence distributions — used for post-launch tool diagnostics |
 | `list_factual_research_ipfs_links.py` | Print IPFS gateway URLs for the most recent `factual_research` delivers on Gnosis so raw payloads can be inspected |
+| `fetch_recent_mech_delivers.py` | Fetch delivers for a mech over a past-N-hours window and summarise by tool — useful for post-deploy verification |
+| `check_marketplace_request_encoding.py` | Compare data-field encoding across mech-marketplace Request events (raw 34-byte multihash vs UTF-8 CID string) to diagnose IPFS resolution failures |
 
 ## Data Sources
 
